@@ -1,23 +1,17 @@
 import pygame
 import math
 import random
-
-class Unit:
-    def __init__(self):
-        pass
-    def display(self,screen,size):
-        ninja = pygame.image.load("idle.png")
-        ninja = pygame.transform.flip(ninja, False, True)
-        screen.blit(ninja,size)
+from unit import *
 
 class Tile:
-    top_img = pygame.transform.flip(pygame.image.load("top.png"), False, True)
+    top_img = pygame.transform.flip(pygame.image.load("img/top.png"), False, True)
     sqS = ()
     def __init__(self,cx,cy,cz):
+        self.selected = False
         self.x = cx
         self.y = cy
         self.z = cz
-        self.unit = (Unit() if random.randint(0,20)<4 else None)
+        self.unit = (Unit("ninja") if random.randint(0,20)<4 else None)
     def drawTile(self, surface, mx, rx=None, ry=None, rz=None):
         if Tile.sqS == ():
             raise Exception("You must define sqS in Tile before using any Tiles")
@@ -30,7 +24,7 @@ class Tile:
         sqD = Tile.sqS[2]
         
         # vvv COLORS!!! vvv
-        step = 255/max(20,20)
+        step = 255/max(20,20)   # size of board
         base  = (rx*step/2,ry*step/4,50)
         top = (rx*step,50,ry*step)
         #base = (128,64,0)
@@ -43,7 +37,8 @@ class Tile:
         
         pygame.draw.polygon(surf, base, [(0,sqH/2),(sqW/2,0),(sqW,sqH/2),(sqW,sqD*rz+sqH/2),(0,sqD*rz+sqH/2)])
         surf.blit(Tile.top_img, (0,sqD*rz+1))
-        #pygame.draw.polygon(surf, top,  [(0,sqD*rz+sqH/2),(sqW/2,sqD*rz),(sqW,sqD*rz+sqH/2),(sqW/2,sqD*rz+sqH)])
+        if self.selected:
+            pygame.draw.polygon(surf, top,  [(0,sqD*rz+sqH/2),(sqW/2,sqD*rz),(sqW,sqD*rz+sqH/2),(sqW/2,sqD*rz+sqH)])
         surfloc = ((mx-1)*sqW/2-((rx-ry)*sqW)/2, ((rx+ry-2)*sqH)/2)
         surface.blit(surf, surfloc)
         if self.unit != None:
@@ -84,8 +79,15 @@ class Board:
         
         self.dx = (cx-cy)*self.sqS[0]/2+(self.ssize[0]-self.board_size[0])/2
         self.dy = (cx+cy)*self.sqS[1]/2+zOffset*self.sqS[2]+(self.ssize[1]/2-(self.board_size[1]+self.board_size[2]))+18
-
+    
+    def selectSquare(self, cx, cy):
+        cx = int(cx)
+        cy = int(cy)
+        self.board_data[int(cx)][int(cy)].selected ^= True
+        self.buildDisplay()
+    
     def buildDisplay(self):
+        self.board_image.fill((0,0,0))
         for x in range(self.chunk[0]-1,-1,-1):
             for y in range(self.chunk[1]-1,-1,-1):
                 self.board_data[x][y].drawTile(self.board_image, self.chunk[0])

@@ -7,12 +7,12 @@ from tile import *
 pygame.init()
 
 # Define the colors we will use in RGB format
-black = (  0,  0,  0)
-white = (255,255,255)
-blue =  (  0,  0,255)
-green = (  0,128,  0)
-red =   (255,  0,  0)
-brown = (128, 64,  0)
+colors = {"black":(  0,  0,  0),\
+          "white":(255,255,255),\
+          "blue": (  0,  0,255),\
+          "green":(  0,128,  0),\
+          "red":  (255,  0,  0),\
+          "brown":(128, 64,  0)}
 
 pi=3.141592653
 
@@ -31,10 +31,10 @@ done=False
 clock = pygame.time.Clock()
 
 board = Board((20,20,30), (40,20,10), size)
-screen.fill(black)
+screen.fill(colors["black"])
 board.setDisplayPosition(cx,cy)
 
-moving = 0
+moving = 0  # direction of movement (0 is stationary, 1-4 are directions)
 step = .125 # be careful with this number and floating point rounding....
 
 while not done:
@@ -64,6 +64,8 @@ while not done:
                     if cx != 0:
                         moving = 4
                         board.setDisplayPosition(cx,cy)
+                elif event.key == pygame.K_SPACE:
+                    board.selectSquare(cx,cy)
     
     if moving:
         if moving==1:
@@ -78,13 +80,12 @@ while not done:
         if cx==math.floor(cx) and cy==math.floor(cy):
             moving = 0
     
-    screen.fill(black)
+    screen.fill(colors["black"])
     board.printToScreen(screen)
     pygame.draw.polygon(screen,(255,255,255),[(int((size[0]/2)-20), int((size[1]/2)+5)),\
                                               (int(size[0]/2),      int((size[1]/2)-5)),\
                                               (int((size[0]/2)+20), int((size[1]/2)+5)),\
                                               (int(size[0]/2),      int((size[1]/2)+15))], 3)
-    #pygame.draw.circle(screen,white,(size[0]/2,size[1]/2),10)   # draw player
     pygame.display.flip()
 
 # Be IDLE friendly
