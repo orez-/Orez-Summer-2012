@@ -45,6 +45,7 @@ class SkillHelix:
     def __init__(self):
         self.moving = 0
         self.cur_y = 0
+        self.viewangle = 0
         names = list(set(random_word() for _ in xrange(20)))
         self.skills = {n:{"next":[] if i%2 else names[i+1:i+3], "color":tuple(random.randint(0,0xFF) for _ in xrange(3))} for i,n in enumerate(names)}
         self.orbsurface = pygame.Surface((1000, 500), pygame.SRCALPHA)  # size might be wrong
@@ -54,7 +55,7 @@ class SkillHelix:
 
     def keep_moving(self):
         if self.moving:
-            if int(self.cur_y) != int(self.cur_y + self.moving):
+            if int(self.cur_y) != int(self.cur_y + self.moving) or self.cur_y * (self.cur_y + self.moving) <= 0:
                 self.cur_y = int(round(self.cur_y+self.moving))
                 self.moving = 0
             else:
@@ -80,13 +81,22 @@ class SkillHelix:
     def draw_orb(self, orb):
         for color, wid in ((orb["color"], 0), ((0, ) * 3, 2)):
             if orb["done"]:
-                pygame.draw.circle(self.orbsurface, color, map(int, (orb["pos"][0]*DNA_RADIUS*cos(orb["angle"]-(DNA_TWIST * self.cur_y) % (2 * pi))+500, (orb["pos"][1]-self.cur_y)*DNA_STEP+250)), SKILL_RADIUS, wid)
+                orb["curpos"] = map(int, (orb["pos"][0]*DNA_RADIUS*cos(orb["angle"]-(DNA_TWIST * self.cur_y) % (2 * pi))+500,
+                    sin(self.viewangle)*orb["pos"][0]*DNA_RADIUS*sin(orb["angle"]-(DNA_TWIST * self.cur_y) % (2 * pi))+250+cos(self.viewangle)*(orb["pos"][1]-self.cur_y)*DNA_STEP))
+                #(orb["pos"][1]-self.cur_y)*DNA_STEP+250))
+                #_y = cy+Math.sin(angle+mod-Math.PI/2-fullstep)*spinradius*Math.sin(viewangle) + cz*Math.cos(viewangle);
+                pygame.draw.circle(self.orbsurface, color, orb["curpos"], SKILL_RADIUS, wid)
 
     def redraw(self):
         self.linesurface.fill((0xFF, )*3)
         self.orbsurface.fill((0, )*4)
         for skill in self.skills:
             self.draw_orb(self.skills[skill])
+        for skill in self.skills:
+            for next in self.skills[skill]["next"]:
+                pygame.draw.line(self.linesurface, (0, ) * 3 ,
+                    self.skills[skill]["curpos"],
+                    self.skills[next]["curpos"], 2)
 
     def reblit(self, screen):
         screen.blit(self.linesurface, (0,0))

@@ -25,6 +25,8 @@ class Main:
         self.skills = SkillHelix()
         self.screen.fill((0, ) * 3)
         self.board.set_display_position(*self.cursor.board_pos)
+        
+        self.mousedown = False
 
     def run(self):
         while not self.done:
@@ -37,8 +39,19 @@ class Main:
                         self.skills.move(-1)
                     if event.key == pygame.K_DOWN:
                         self.skills.move(1)
+                    try:
+                        self.skills.viewangle = int(event.unicode)*pi/18
+                        self.skills.redraw()
+                    except:
+                        pass
                     #if self.cursor.handle_key(event.key, self.board):
                     #    self.board.set_display_position(*self.cursor.board_pos)
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    self.mousedown = True
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    self.mousedown = False
+                elif event.type == pygame.MOUSEMOTION:
+                    pass
 
             self.skills.keep_moving()
             if self.cursor.keep_moving():
