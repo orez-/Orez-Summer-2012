@@ -59,7 +59,7 @@ class Board:
                 self.board_data[x][y].draw_tile(self.board_image, self.chunk[0])
         self.board_image = pygame.transform.flip(self.board_image, False, True)
 
-    def print_to_screen(self, screen):
+    def reblit(self, screen):
         screen.blit(self.board_image, (self.dx, self.dy))
 
     def assert_type(self, checkitem, checkType, size=-1, **args):
