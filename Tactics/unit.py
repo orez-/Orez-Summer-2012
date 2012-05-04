@@ -4,7 +4,7 @@ import pygame
 class Stats:
     # TODO: figure out what stats are used in this friggin game.
     def __init__(self, attack, defense, hp, mp, **args):
-        self.attack  = attack
+        self.attack = attack
         self.defense = defense
         self.hp = hp
         self.mp = mp
@@ -15,7 +15,8 @@ class ElementalDamage():
 
 
 class Unit:
-    # TODO: late step: this loads all class's images whether they're needed or not.
+    # TODO: late step: this loads all class's images
+    # whether they're needed or not.
     def __init__(self, job):
         self.job = Job(job)
         #self.skills = SkillWeb
@@ -42,7 +43,8 @@ class Job(object):
     def __new__(cls, job, *args, **kwargs):
         token = Job.token[job.lower()]
         if token not in Job.instances:
-            Job.instances[token] = super(Job, cls).__new__(cls, *args, **kwargs)
+            Job.instances[token] = \
+                super(Job, cls).__new__(cls, *args, **kwargs)
             Job.instances[token].__init(token)
         return Job.instances[token]
 

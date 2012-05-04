@@ -36,15 +36,17 @@ class Board:
             fx = cx - int(cx)
             fy = cy - int(cy)
             if fx and fy:
-                raise TypeError("You may only move the display in one cardinal"+
-                    "direction at a time.")
+                raise TypeError("You may only move the display in one" +
+                    "cardinal direction at a time.")
             zOffset = self.board_data[int(cx)][int(cy)].z * (1 - max(fx, fy))
             zOffset += self.board_data[int(ceil(cx))][int(ceil(cy))].z *\
                     max(fx, fy)
             # linear average of the two
 
-        self.dx = (cx - cy) * self.sqS[0] / 2 + (self.ssize[0] - self.board_size[0]) / 2
-        self.dy = (cx + cy) * self.sqS[1] / 2 + zOffset * self.sqS[2] + (self.ssize[1] / 2 - (self.board_size[1] + self.board_size[2])) + 18
+        self.dx = ((cx - cy) * self.sqS[0] / 2 +
+            (self.ssize[0] - self.board_size[0]) / 2)
+        self.dy = ((cx + cy) * self.sqS[1] / 2 + zOffset * self.sqS[2] + 18 +
+            (self.ssize[1] / 2 - (self.board_size[1] + self.board_size[2])))
 
     def select_square(self, cx, cy):
         cx = int(cx)
@@ -56,7 +58,8 @@ class Board:
         self.board_image.fill((0, 0, 0))
         for x in xrange(self.chunk[0] - 1, -1, -1):
             for y in xrange(self.chunk[1] - 1, -1, -1):
-                self.board_data[x][y].draw_tile(self.board_image, self.chunk[0])
+                self.board_data[x][y].draw_tile(self.board_image,
+                    self.chunk[0])
         self.board_image = pygame.transform.flip(self.board_image, False, True)
 
     def reblit(self, screen):
@@ -70,8 +73,8 @@ class Board:
         (size == -1 or len(checkitem) == size)):
             size = str(size)
             if isinstance(checkitem, checkType):
-                raise TypeError("You must pass a tuple of size " + size + name\
+                raise TypeError("You must pass a tuple of size " + size + name
                     + " (passed tuple of size " + str(len(checkitem)) + ")")
-            raise TypeError("You must pass a tuple" + ("" if size == "-1" else\
-                " of size " + size) + name + " (passed " + str(type(checkitem))\
+            raise TypeError("You must pass a tuple" + ("" if size == "-1" else
+                " of size " + size) + name + " (passed " + str(type(checkitem))
                 + ")")

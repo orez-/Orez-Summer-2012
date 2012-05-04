@@ -2,9 +2,8 @@ import pygame
 import random
 from math import pi
 
-from cursor import Cursor
-from board import Board
-from skills import SkillHelix
+from ui.skill_ui import SkillUI
+from ui.battle_ui import BattleUI
 
 
 class Main:
@@ -19,13 +18,9 @@ class Main:
         self.done = False
         self.clock = pygame.time.Clock()
 
-        self.cursor = Cursor()
-        self.board = Board((20, 20, 30), (40, 20, 10), self.size)
-        # TODO: not a fan of the magic numbers
-        self.skills = SkillHelix()
         self.screen.fill((0, ) * 3)
-        self.board.set_display_position(*self.cursor.board_pos)
-        
+
+        self.ui = SkillUI()
         self.mousedown = False
 
     def run(self):
@@ -35,17 +30,7 @@ class Main:
                 if event.type == pygame.QUIT:
                     self.done = True
                 elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_UP:
-                        self.skills.move(-1)
-                    if event.key == pygame.K_DOWN:
-                        self.skills.move(1)
-                    try:
-                        self.skills.viewangle = int(event.unicode)*pi/18
-                        self.skills.redraw()
-                    except:
-                        pass
-                    #if self.cursor.handle_key(event.key, self.board):
-                    #    self.board.set_display_position(*self.cursor.board_pos)
+                    self.ui.keydown(event)
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     self.mousedown = True
                 elif event.type == pygame.MOUSEBUTTONUP:
@@ -53,13 +38,9 @@ class Main:
                 elif event.type == pygame.MOUSEMOTION:
                     pass
 
-            self.skills.keep_moving()
-            if self.cursor.keep_moving():
-                self.board.set_display_position(*self.cursor.board_pos)
+            self.ui.keep_moving()
             self.screen.fill((0, ) * 3)
-            self.skills.reblit(self.screen)
-            #self.board.reblit(self.screen)
-            #self.cursor.redraw(self.screen)
+            self.ui.reblit(self.screen)
             pygame.display.flip()
         pygame.quit()
 
