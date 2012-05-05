@@ -21,8 +21,7 @@ class SkillUI(ui.TacticsUI):
         if event.key == pygame.K_DOWN:
             self.skills.move(1)
         try:
-            self.skills.viewangle = int(event.unicode) * pi / 18
-            self.skills.redraw()
+            self.skills.set_viewangle(int(event.unicode)*10)
         except:
             pass
 

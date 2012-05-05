@@ -17,14 +17,14 @@ class Board:
                            (self.chunk[0] + self.chunk[1]) * self.sqS[1] / 2,
                            (self.chunk[2] * self.sqS[2]))
         self.board_data = [[Tile(x + 1, y + 1, min(self.chunk[2],
-                                int(((y + 1) ** 2 + (x + 1) ** 2) ** .5)))\
-                                for y in xrange(self.chunk[1])]\
+                                int(((y + 1) ** 2 + (x + 1) ** 2) ** .5)))
+                                for y in xrange(self.chunk[1])]
                                     for x in xrange(self.chunk[0])]
         self.board_image = pygame.Surface(
             (self.board_size[0], self.board_size[1] + self.board_size[2]))
         self.dx = 0
         self.dy = 0
-        self.build_display()
+        self.redraw()
 
     def set_display_position(self, cx, cy):
         """ Set the display position based on player coordinates. Accepts
@@ -48,13 +48,21 @@ class Board:
         self.dy = ((cx + cy) * self.sqS[1] / 2 + zOffset * self.sqS[2] + 18 +
             (self.ssize[1] / 2 - (self.board_size[1] + self.board_size[2])))
 
+    def get_unit(self, x, y):
+        return self.board_data[x][y].tile
+
+    def set_unit(self, x, y, unit):
+        t = self.board_data[x][y]
+        unit.tile = t
+        t.unit = unit
+
     def select_square(self, cx, cy):
         cx = int(cx)
         cy = int(cy)
         self.board_data[int(cx)][int(cy)].selected ^= True
-        self.build_display()
+        self.redraw()
 
-    def build_display(self):
+    def redraw(self):
         self.board_image.fill((0, 0, 0))
         for x in xrange(self.chunk[0] - 1, -1, -1):
             for y in xrange(self.chunk[1] - 1, -1, -1):

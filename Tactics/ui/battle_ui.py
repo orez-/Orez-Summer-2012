@@ -18,7 +18,7 @@ class BattleUI(ui.TacticsUI):
 
     def reblit(self, screen):
         self.board.reblit(screen)
-        self.cursor.redraw(screen)
+        self.cursor.reblit(screen)
 
     def keydown(self, event):
         if self.cursor.handle_key(event.key, self.board):

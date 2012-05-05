@@ -17,8 +17,9 @@ class ElementalDamage():
 class Unit:
     # TODO: late step: this loads all class's images
     # whether they're needed or not.
-    def __init__(self, job):
+    def __init__(self, job, tile=None):
         self.job = Job(job)
+        self.tile = tile
         #self.skills = SkillWeb
 
     def display(self, screen, size):
@@ -33,7 +34,7 @@ class Job(object):
     token = {"ninja": NINJA, "trainee": TRAINEE}
     sprite = {k: pygame.image.load("img/" + v + ".png") for k, v in
         [(NINJA, "idle"),
-         (TRAINEE, "idle")]}  # FIXME: don't preload?
+         (TRAINEE, "hero")]}  # FIXME: don't preload?
     basestats = {NINJA: Stats(5, 5, 5, 5),
                  TRAINEE: Stats(5, 5, 5, 5)}  # FIXME: do I even want to do
     statgrowth = {NINJA: Stats(5, 5, 5, 5),

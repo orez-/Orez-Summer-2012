@@ -16,7 +16,7 @@ consonant = ''.join(filter(lambda x: x not in vowel, alphabet))
 SKILL_RADIUS = 12
 DNA_RADIUS = 70
 DNA_STEP = 50
-DNA_TWIST = pi/8
+DNA_TWIST = pi / 8
 
 """
 UP, RIGHT, DOWN, LEFT, IN = (2 ** i for i in xrange(5))
@@ -28,7 +28,7 @@ def random_word(length=8):
     toR = random.choice(consonant)
     while len(toR) < length:
         toR += random.choice(vowel)
-        eh = random.randint(1,3)
+        eh = random.randint(1, 3)
         if eh == 1:
             toR += random.choice(vowel)
         toR += random.choice(consonant)
@@ -47,7 +47,7 @@ class SkillHelix:
         self.cur_y = 0
         self.viewangle = 0
         names = list(set(random_word() for _ in xrange(20)))
-        self.skills = {n:{"next":[] if i%2 else names[i+1:i+3], "color":tuple(random.randint(0,0xFF) for _ in xrange(3))} for i,n in enumerate(names)}
+        self.skills = {n: {"next": [] if i % 2 else names[i + 1: i + 3], "color": tuple(random.randint(0, 0xFF) for _ in xrange(3))} for i, n in enumerate(names)}
         self.orbsurface = pygame.Surface((1000, 500), pygame.SRCALPHA)  # size might be wrong
         self.linesurface = pygame.Surface((1000, 500))
         self.init_skills(names[0])
@@ -62,10 +62,14 @@ class SkillHelix:
                 self.cur_y += self.moving
             self.redraw()
 
+    def set_viewangle(self, degrees):
+        self.viewangle = degrees * pi / 180
+        self.redraw()
+
     def move(self, direction):
         if abs(direction) != 1:
             raise ValueError("Directional values only")
-        self.moving = direction*.125
+        self.moving = direction * .125
         self.cur_y += self.moving
 
     def init_skills(self, job, pos=(-1, 0)):
@@ -75,14 +79,14 @@ class SkillHelix:
 
         up = False
         for next in self.skills[job]["next"]:
-            self.init_skills(next, (pos[0]*(up*2-1), pos[1]+up))
+            self.init_skills(next, (pos[0] * (up * 2 - 1), pos[1] + up))
             up = True
 
     def draw_orb(self, orb):
         for color, wid in ((orb["color"], 0), ((0, ) * 3, 2)):
             if orb["done"]:
-                orb["curpos"] = map(int, (orb["pos"][0]*DNA_RADIUS*cos(orb["angle"]-(DNA_TWIST * self.cur_y) % (2 * pi))+500,
-                    sin(self.viewangle)*orb["pos"][0]*DNA_RADIUS*sin(orb["angle"]-(DNA_TWIST * self.cur_y) % (2 * pi))+250+cos(self.viewangle)*(orb["pos"][1]-self.cur_y)*DNA_STEP))
+                orb["curpos"] = map(int, (orb["pos"][0] * DNA_RADIUS * cos(orb["angle"] - (DNA_TWIST * self.cur_y) % (2 * pi)) + 500,
+                    sin(self.viewangle) * orb["pos"][0] * DNA_RADIUS * sin(orb["angle"] - (DNA_TWIST * self.cur_y) % (2 * pi)) + 250 + cos(self.viewangle) * (orb["pos"][1] - self.cur_y) * DNA_STEP))
                 #(orb["pos"][1]-self.cur_y)*DNA_STEP+250))
                 #_y = cy+Math.sin(angle+mod-Math.PI/2-fullstep)*spinradius*Math.sin(viewangle) + cz*Math.cos(viewangle);
                 pygame.draw.circle(self.orbsurface, color, orb["curpos"], SKILL_RADIUS, wid)
@@ -126,9 +130,9 @@ class SkillWeb:
     def init_skills(self, job, circle=0, last_angle=None, direction=None):
         if not self.skills[job]["done"]:
             if last_angle is None:
-                last_angle = random.randint(0,7)
+                last_angle = random.randint(0, 7)
             if direction is None:
-                direction = random.randint(0,1) * 2 - 1
+                direction = random.randint(0, 1) * 2 - 1
             self.skills[job].update({
                 "circle":circle,
                 "angle":last_angle,
@@ -163,5 +167,5 @@ class SkillWeb:
             self.draw_orb(self.skills[skill])
 
     def reblit(self, screen):
-        screen.blit(self.linesurface, (0,0), (self.view_pos[0], self.view_pos[1], 1000, 500))
-        screen.blit(self.orbsurface, (0,0), (self.view_pos[0], self.view_pos[1], 1000, 500))
+        screen.blit(self.linesurface, (0, 0), (self.view_pos[0], self.view_pos[1], 1000, 500))
+        screen.blit(self.orbsurface, (0, 0), (self.view_pos[0], self.view_pos[1], 1000, 500))

@@ -4,6 +4,7 @@ from math import pi
 
 from ui.skill_ui import SkillUI
 from ui.battle_ui import BattleUI
+from ui.overworld_ui import OverworldUI
 
 
 class Main:
@@ -20,7 +21,8 @@ class Main:
 
         self.screen.fill((0, ) * 3)
 
-        self.ui = SkillUI()
+        #self.ui = SkillUI()
+        self.ui = OverworldUI()
         self.mousedown = False
 
     def run(self):

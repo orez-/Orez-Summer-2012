@@ -14,15 +14,15 @@ class Tile:
         self.x = cx
         self.y = cy
         self.z = cz
-        self.unit = (Unit("ninja") if random.randint(0, 20) < 4 else None)
+        self.unit = (Unit("ninja", self) if random.randint(0, 20) < 4 else None)
 
     def draw_tile(self, surface, mx, rx=None, ry=None, rz=None):
         if Tile.sqS == ():
             raise Exception("You must define sqS in Tile" +
                 "before using any Tiles")
-        rx = self.x if rx == None else rx
-        ry = self.y if ry == None else ry
-        rz = self.z if rz == None else rz
+        rx = self.x if rx is None else rx
+        ry = self.y if ry is None else ry
+        rz = self.z if rz is None else rz
 
         sqW = Tile.sqS[0]
         sqH = Tile.sqS[1]
@@ -52,6 +52,6 @@ class Tile:
         surfloc = ((mx - 1) * sqW / 2 - ((rx - ry) * sqW) / 2,
             ((rx + ry - 2) * sqH) / 2)
         surface.blit(surf, surfloc)
-        if self.unit != None:
+        if self.unit is not None:
             self.unit.display(surface, (int(surfloc[0] + (size[0] - 25) / 2),
                 int(surfloc[1] + size[1] - 12)))
