@@ -1,25 +1,34 @@
 import pygame
 
 
-class Stats:
+class Stats(object):
     # TODO: figure out what stats are used in this friggin game.
     def __init__(self, attack, defense, hp, mp, **args):
         self.attack = attack
         self.defense = defense
         self.hp = hp
+        self.cur_hp = hp
         self.mp = mp
 
+    def get_hp(self):
+        return self.hp
 
-class ElementalDamage():
-    pass
+    def get_cur_hp(self):
+        return self.cur_hp
+
+    def get_hp_frac(self):
+        return float(self.cur_hp)/self.hp
 
 
-class Unit:
+class Unit(Stats):
     # TODO: late step: this loads all class's images
     # whether they're needed or not.
-    def __init__(self, job, tile=None):
+    def __init__(self, job, tile=None, **kwargs):
+        super(Unit, self).__init__(4, 5, 6, 7)
         self.job = Job(job)
         self.tile = tile
+        self.name = "Orez"
+        self.__dict__.update(kwargs)
         #self.skills = SkillWeb
 
     def display(self, screen, size):

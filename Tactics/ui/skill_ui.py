@@ -7,6 +7,7 @@ import ui
 
 class SkillUI(ui.TacticsUI):
     def __init__(self):
+        super(ui.TacticsUI, self).__init__()
         self.skills = SkillHelix()
 
     def redraw(self):

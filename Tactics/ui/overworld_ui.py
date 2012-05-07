@@ -4,8 +4,12 @@ from unit import Unit
 from cursor import Cursor
 
 
+class Stupid:
+    pass
+
 class OverworldUI(ui.TacticsUI):
     def __init__(self):
+        super(ui.TacticsUI, self).__init__()
         self.size = (1000, 500)
 
         self.board = Board((20, 20, 30), (40, 20, 10), self.size)
@@ -15,6 +19,7 @@ class OverworldUI(ui.TacticsUI):
         self.board.redraw()
 
         self.board.set_display_position(*self.cursor.board_pos)
+        self.keys = set()
 
     def redraw(self):
         pass
@@ -26,6 +31,10 @@ class OverworldUI(ui.TacticsUI):
         if self.cursor.handle_key(event.key, self.board):
             self.board.set_display_position(*self.cursor.board_pos)
             self.board.redraw()
+            self.keys.add(event.key)
+
+    def keyup(self, event):
+        self.keys.discard(event.key)
 
     def keep_moving(self):
         if self.cursor.keep_moving():
@@ -33,3 +42,12 @@ class OverworldUI(ui.TacticsUI):
         elif self.cursor.unit.tile is None:
             self.board.set_unit(*self.cursor.set_unit_here())
             self.board.redraw()
+            try:
+                e = self.keys.pop()
+                self.keys.add(e)
+                x = Stupid()
+                x.key = e
+                self.keydown(x)
+            except KeyError:
+                print "no key"
+

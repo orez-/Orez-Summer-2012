@@ -5,6 +5,7 @@ from board import Board
 
 class BattleUI(ui.TacticsUI):
     def __init__(self):
+        super(ui.TacticsUI, self).__init__()
         self.size = (1000, 500)  # gotta find a better way to pass these
 
         self.cursor = Cursor()

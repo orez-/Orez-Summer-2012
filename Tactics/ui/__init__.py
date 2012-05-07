@@ -11,5 +11,8 @@ class TacticsUI(object):
     def keydown(self, event):
         pass
 
+    def keyup(self, event):
+        pass
+
     def keep_moving(self):
         pass
