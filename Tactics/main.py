@@ -30,7 +30,7 @@ class Main:
 
         self.screen.fill((0, ) * 3)
 
-        self.ui = BattleUI()
+        self.ui = TeamUI()
         self.mousedown = False
 
     def draw_fps(self):

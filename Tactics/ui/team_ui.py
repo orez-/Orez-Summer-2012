@@ -11,7 +11,14 @@ class TeamUI(ui.TacticsUI):
         self.size = (1000, 500)
         self.surface = pygame.Surface(self.size)
         self.units = [MenuUnit(Unit("trainee", name="Orez"+str(i)), i) for i in xrange(6)]
+        self.highlighted = 0
 
+        self.redraw()
+
+    def select_unit(self, amt):
+        self.units[self.highlighted].set_selected(False)
+        self.highlighted = (self.highlighted + amt) % len(self.units)
+        self.units[self.highlighted].set_selected(True)
         self.redraw()
 
     def redraw(self):
@@ -23,7 +30,14 @@ class TeamUI(ui.TacticsUI):
         screen.blit(self.surface, (0, 0))
 
     def keydown(self, event):
-        pass
+        if event.key == pygame.K_w:
+            self.select_unit(-2)
+        elif event.key == pygame.K_a:
+            self.select_unit(-1)
+        elif event.key == pygame.K_s:
+            self.select_unit(2)
+        elif event.key == pygame.K_d:
+            self.select_unit(1)
 
     def keyup(self, event):
         pass
@@ -41,11 +55,20 @@ class MenuUnit:
         self.unit = unit
         spacing = 12.5
         self.loc = (spacing + ((loc % 2) * (self.size[0] + spacing)),
-            (loc // 2) * (self.size[1] + spacing) + spacing)
+            (loc // 2) * (self.size[1] + spacing) + spacing
+            + ((loc % 2) * 2 - 1) * spacing / 2)
+        self.selected = False
+        self.redraw()
+
+    def set_selected(self, selected):
+        self.selected = selected
         self.redraw()
 
     def redraw(self):
-        self.surface.fill((0x00, 0x66, 0xFF))
+        color = (0x00, 0x66, 0xFF)
+        if self.selected:
+            color = (0x66, 0x88, 0xFF)
+        self.surface.fill(color)
         pygame.draw.rect(self.surface, (0, ) * 3, ((0, 0), self.size), 3)
 
         self.surface.fill((0x00, 0x33, 0x33), ((7, 7), self.portrait_size))
