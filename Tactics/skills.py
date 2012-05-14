@@ -48,8 +48,8 @@ class SkillHelix:
         self.viewangle = 0
         names = list(set(random_word() for _ in xrange(20)))
         self.skills = {n: {"next": [] if i % 2 else names[i + 1: i + 3], "color": tuple(random.randint(0, 0xFF) for _ in xrange(3))} for i, n in enumerate(names)}
-        self.orbsurface = pygame.Surface((1000, 500), pygame.SRCALPHA)  # size might be wrong
-        self.linesurface = pygame.Surface((1000, 500))
+        self.orbsurface = pygame.Surface(SCREEN_SIZE, pygame.SRCALPHA)  # size might be wrong
+        self.linesurface = pygame.Surface(SCREEN_SIZE)
         self.init_skills(names[0])
         self.redraw()
 
@@ -85,8 +85,8 @@ class SkillHelix:
     def draw_orb(self, orb):
         for color, wid in ((orb["color"], 0), ((0, ) * 3, 2)):
             if orb["done"]:
-                orb["curpos"] = map(int, (orb["pos"][0] * DNA_RADIUS * cos(orb["angle"] - (DNA_TWIST * self.cur_y) % (2 * pi)) + 500,
-                    sin(self.viewangle) * orb["pos"][0] * DNA_RADIUS * sin(orb["angle"] - (DNA_TWIST * self.cur_y) % (2 * pi)) + 250 + cos(self.viewangle) * (orb["pos"][1] - self.cur_y) * DNA_STEP))
+                orb["curpos"] = map(int, (orb["pos"][0] * DNA_RADIUS * cos(orb["angle"] - (DNA_TWIST * self.cur_y) % (2 * pi)) + SCREEN_SIZE[0] / 2,
+                    sin(self.viewangle) * orb["pos"][0] * DNA_RADIUS * sin(orb["angle"] - (DNA_TWIST * self.cur_y) % (2 * pi)) + SCREEN_SIZE[1] / 2 + cos(self.viewangle) * (orb["pos"][1] - self.cur_y) * DNA_STEP))
                 #(orb["pos"][1]-self.cur_y)*DNA_STEP+250))
                 #_y = cy+Math.sin(angle+mod-Math.PI/2-fullstep)*spinradius*Math.sin(viewangle) + cz*Math.cos(viewangle);
                 pygame.draw.circle(self.orbsurface, color, orb["curpos"], SKILL_RADIUS, wid)
@@ -110,15 +110,15 @@ class SkillHelix:
 class SkillWeb:
     def __init__(self):
         self.view_pos = [0,0]
-        self.orbsurface = pygame.Surface((1000, 500), pygame.SRCALPHA)  # size might be wrong
-        self.linesurface = pygame.Surface((1000, 500))
+        self.orbsurface = pygame.Surface(SCREEN_SIZE, pygame.SRCALPHA)  # size might be wrong
+        self.linesurface = pygame.Surface(SCREEN_SIZE)
         self.linesurface.fill((0xFF, ) * 3)
         
         self.skills = {}
         names = list(set(random_word() for _ in xrange(20)))
         self.job = names[0]
         for name in names:
-            self.skills[name] = {"next":[random.choice(names[len(self.skills):]) for x in xrange(int(random.randint(4,8)/4))] if len(self.skills)-len(names) else [],
+            self.skills[name] = {"next":[random.choice(names[len(self.skills): ]) for x in xrange(int(random.randint(4, 8) / 4))] if len(self.skills) - len(names) else [],
                 "color":(random.randint(0,255), random.randint(0,255), random.randint(0,255)),
                 "done":False}
         self.init_skills(self.job)
@@ -136,8 +136,8 @@ class SkillWeb:
             self.skills[job].update({
                 "circle":circle,
                 "angle":last_angle,
-                "pos":(int(cos(pi * last_angle / 4) * self.circle_radius(circle)) + 500,
-                       int(sin(pi * last_angle / 4) * self.circle_radius(circle)) + 250),
+                "pos":(int(cos(pi * last_angle / 4) * self.circle_radius(circle)) + SCREEN_SIZE[0] / 2,
+                       int(sin(pi * last_angle / 4) * self.circle_radius(circle)) + SCREEN_SIZE[1] / 2),
                 "done":True
             })
             for next in self.skills[job]["next"]:
@@ -149,10 +149,10 @@ class SkillWeb:
                     pos, ang = self.init_skills(next, circle, maybe_angle, direction)
                     r = self.circle_radius(circle)
                     #pygame.draw.line(self.linesurface, self.skills[job]["color"], self.skills[job]["pos"], pos, 2)
-                    arc(self.linesurface, self.skills[job]["color"], (-r+500, -r+250, 2 * r, 2 * r), last_angle * pi / 4, ang * pi / 4, 2)
+                    arc(self.linesurface, self.skills[job]["color"], (-r+SCREEN_SIZE[0] / 2, -r+SCREEN_SIZE[1] / 2, 2 * r, 2 * r), last_angle * pi / 4, ang * pi / 4, 2)
                     pygame.draw.line(self.linesurface, self.skills[job]["color"],
-                        (int(cos(pi * ang / 4) * self.circle_radius(circle)) + 500,
-                         int(sin(pi * ang / 4) * self.circle_radius(circle)) + 250), pos, 2)
+                        (int(cos(pi * ang / 4) * self.circle_radius(circle)) + SCREEN_SIZE[0] / 2,
+                         int(sin(pi * ang / 4) * self.circle_radius(circle)) + SCREEN_SIZE[1] / 2), pos, 2)
 
         return self.skills[job]["pos"], self.skills[job]["angle"]
 
@@ -167,5 +167,5 @@ class SkillWeb:
             self.draw_orb(self.skills[skill])
 
     def reblit(self, screen):
-        screen.blit(self.linesurface, (0, 0), (self.view_pos[0], self.view_pos[1], 1000, 500))
-        screen.blit(self.orbsurface, (0, 0), (self.view_pos[0], self.view_pos[1], 1000, 500))
+        screen.blit(self.linesurface, (0, 0), (self.view_pos[0], self.view_pos[1], SCREEN_SIZE[0], SCREEN_SIZE[1]))
+        screen.blit(self.orbsurface, (0, 0), (self.view_pos[0], self.view_pos[1], SCREEN_SIZE[0], SCREEN_SIZE[1]))

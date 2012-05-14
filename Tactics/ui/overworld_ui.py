@@ -2,7 +2,7 @@ import ui
 from board import Board
 from unit import Unit
 from cursor import Cursor
-
+from constants import SCREEN_SIZE
 
 class Stupid:
     pass
@@ -10,7 +10,7 @@ class Stupid:
 class OverworldUI(ui.TacticsUI):
     def __init__(self):
         super(ui.TacticsUI, self).__init__()
-        self.size = (1000, 500)
+        self.size = SCREEN_SIZE
 
         self.board = Board((20, 20, 30), (40, 20, 10), self.size)
         player = Unit("trainee")

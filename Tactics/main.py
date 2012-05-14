@@ -2,6 +2,7 @@ import pygame
 import random
 from math import pi
 
+from constants import SCREEN_SIZE
 from ui.skill_ui import SkillUI
 from ui.battle_ui import BattleUI
 from ui.overworld_ui import OverworldUI
@@ -14,7 +15,7 @@ class Main:
 
         d = pygame.display.Info()
         self.desktop_size = (d.current_w, d.current_h)
-        self.size = (1000, 500)
+        self.size = SCREEN_SIZE
         self.ssize = self.size
         self.blit_offset = (0, 0)
 
@@ -49,7 +50,7 @@ class Main:
                 pygame.FULLSCREEN | pygame.HWSURFACE)
             scale = min((float(ds) / s) for ds, s in
                 zip(self.desktop_size, self.size))
-            self.ssize = map(lambda x:int(x*scale), self.size)
+            self.ssize = map(lambda x: int(x * scale), self.size)
             self.blit_offset = tuple((ds - (scale * s)) / 2 for ds, s in
                 zip(self.desktop_size, self.size))
         self.fullscreen ^= True

@@ -1,5 +1,7 @@
 import pygame
 
+from constants import SCREEN_SIZE
+
 STEP = .125  # careful with floating point rounding for now
 UP, RIGHT, DOWN, LEFT = (2 ** i for i in xrange(4))
 DIRECTION = {UP: (0, 1), LEFT: (1, 0),
@@ -35,7 +37,7 @@ class Cursor:
         return self.board_pos + [self.unit]
 
     def reblit(self, screen):
-        size = (1000, 500)   # TODO: unacceptable
+        size = SCREEN_SIZE
         pygame.draw.polygon(screen, (0xFF, ) * 3,
             [(int((size[0] / 2) - 20), int((size[1] / 2) + 5)),
              (int(size[0] / 2),      int((size[1] / 2) - 5)),
