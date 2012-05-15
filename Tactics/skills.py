@@ -4,6 +4,8 @@ import sys
 from string import lowercase as alphabet
 from math import cos, sin, pi
 
+from constants import SCREEN_SIZE
+
 try:
     seed = int(sys.argv[1])
 except:
