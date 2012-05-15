@@ -1,3 +1,4 @@
+# THIS FILE IS TERRBILE
 import ui
 from board import Board
 from unit import Unit
@@ -8,8 +9,8 @@ class Stupid:
     pass
 
 class OverworldUI(ui.TacticsUI):
-    def __init__(self):
-        super(ui.TacticsUI, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(OverworldUI, self).__init__(*args, **kwargs)
         self.size = SCREEN_SIZE
 
         self.board = Board((20, 20, 30), (40, 20, 10), self.size)
@@ -51,3 +52,6 @@ class OverworldUI(ui.TacticsUI):
             except KeyError:
                 print "no key"
 
+    @staticmethod
+    def name():
+        return "overworld"

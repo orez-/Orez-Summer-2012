@@ -6,8 +6,8 @@ import ui
 
 
 class SkillUI(ui.TacticsUI):
-    def __init__(self):
-        super(ui.TacticsUI, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(SkillUI, self).__init__(*args, **kwargs)
         self.skills = SkillHelix()
 
     def redraw(self):
@@ -16,11 +16,12 @@ class SkillUI(ui.TacticsUI):
     def reblit(self, screen):
         self.skills.reblit(screen)
 
-    def keydown(self, event):
-        if event.key == pygame.K_UP:
-            self.skills.move(-1)
-        if event.key == pygame.K_DOWN:
-            self.skills.move(1)
+    def k_UP(self):
+        self.skills.move(-1)
+        
+    def k_DOWN(self):
+        self.skills.move(1)
+        
         try:
             self.skills.set_viewangle(int(event.unicode)*10)
         except:
@@ -28,3 +29,7 @@ class SkillUI(ui.TacticsUI):
 
     def keep_moving(self):
         self.skills.keep_moving()
+
+    @staticmethod
+    def name():
+        return "skill"

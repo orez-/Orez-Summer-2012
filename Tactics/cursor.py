@@ -53,25 +53,41 @@ class Cursor:
             self.unit.tile.unit = None
             self.unit.tile = None
 
-    def handle_key(self, key, board):
+    def k_UP(self, board):
         cx, cy = self.board_pos
-        if not self.moving:  # can't go if you ARE moving
-            if key == pygame.K_w:
-                if cy != board.chunk[1] - 1:
-                    self.set_moving(UP)
-                    return True
-            elif key == pygame.K_a:
-                if cx != board.chunk[0] - 1:
-                    self.set_moving(LEFT)
-                    return True
-            elif key == pygame.K_s:
-                if cy != 0:
-                    self.set_moving(DOWN)
-                    return True
-            elif key == pygame.K_d:
-                if cx != 0:
-                    self.set_moving(RIGHT)
-                    return True
-            elif key == pygame.K_SPACE:
-                board.select_square(*self.board_pos)
+        if not self.moving:
+            if cy != board.chunk[1] - 1:
+                self.set_moving(UP)
+                return True
+        return False
+
+
+    def k_LEFT(self, board):
+        cx, cy = self.board_pos
+        if not self.moving:
+            if cx != board.chunk[0] - 1:
+                self.set_moving(LEFT)
+                return True
+        return False
+
+    def k_DOWN(self, board):
+        cx, cy = self.board_pos
+        if not self.moving:
+            if cy != 0:
+                self.set_moving(DOWN)
+                return True
+        return False
+
+    def k_RIGHT(self, board):
+        cx, cy = self.board_pos
+        if not self.moving:
+            if cx != 0:
+                self.set_moving(RIGHT)
+                return True
+        return False
+
+    def k_OK(self, board):
+        cx, cy = self.board_pos
+        if not self.moving:
+            board.select_square(*self.board_pos)
         return False

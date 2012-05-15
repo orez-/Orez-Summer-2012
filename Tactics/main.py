@@ -2,14 +2,18 @@ import pygame
 import random
 from math import pi
 
+from config import Config
 from constants import SCREEN_SIZE
 from ui.skill_ui import SkillUI
 from ui.battle_ui import BattleUI
 from ui.overworld_ui import OverworldUI
 from ui.team_ui import TeamUI
+from ui.config_ui import ConfigUI
 
 
 class Main:
+    ui_list = {x.name():x for x in (SkillUI, BattleUI, OverworldUI,
+        TeamUI, ConfigUI)}
     def __init__(self):
         pygame.init()   # Initialize the game engine
 
@@ -31,8 +35,19 @@ class Main:
 
         self.screen.fill((0, ) * 3)
 
-        self.ui = TeamUI()
+        self.ui = BattleUI(self)
         self.mousedown = False
+        self.config = Config()
+
+    def ui_back(self):
+        """ Set the current ui-view to its parent, discarding the current """
+        if self.ui.parent is not None:
+            self.ui = self.ui.parent
+
+    def push_ui(self, name):
+        """ Push the new UI onto the old one. """
+        print Main.ui_list[name]
+        self.ui = Main.ui_list[name](self, self.ui)
 
     def draw_fps(self):
         self.screen.blit(
@@ -66,7 +81,7 @@ class Main:
                         self.done = True
                     if event.key == pygame.K_F1:
                         self.toggle_fullscreen()
-                    self.ui.keydown(event)
+                    self.config.handle_key(event, self.ui)
                 elif event.type == pygame.KEYUP:
                     self.ui.keyup(event)
                 elif event.type == pygame.MOUSEBUTTONDOWN:
