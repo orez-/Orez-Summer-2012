@@ -22,8 +22,9 @@ class ConfigUI(ui.TacticsUI):
             self.options)) + 10
         self.column_x1 = self.option_width + 20
         self.column_x2 = (self.osurf.get_width() + self.column_x1) / 2
-        self.redraw_osurf()
         self.mode = ConfigUI.SELECT_MODE
+
+        self.redraw_osurf()
 
     def set_mode(self, mode):
         self.mode = mode
@@ -44,7 +45,10 @@ class ConfigUI(ui.TacticsUI):
         col = self.column_x1
         if self.selected % 2:
             col = self.column_x2
-        pygame.draw.rect(self.osurf, (0x66, 0x88, 0xFF), ((col, row), (300, 35)))
+        color = (0x66, 0x88, 0xFF)
+        if self.mode == ConfigUI.INPUT_MODE:
+            color = (0x88, 0xCC, 0xFF)
+        pygame.draw.rect(self.osurf, color, ((col, row), (300, 35)))
 
         config = self.main.config  # alias for readability
 
@@ -113,6 +117,12 @@ class ConfigUI(ui.TacticsUI):
 
     def k_OK(self):
         self.set_mode(ConfigUI.INPUT_MODE)
+        self.redraw_osurf()
+
+    def k_PAUSE(self):
+        self.main.config.clear_key(self.options[self.selected // 2],
+            self.selected % 2)
+        self.redraw_osurf()
 
     @staticmethod
     def name():

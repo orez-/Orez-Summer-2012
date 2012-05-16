@@ -48,10 +48,13 @@ class Config(object):
                 return       # trying to remove the key entirely
             if not num:
                 self.keys[name] = (two, None)
-        if num:
-            self.keys[name] = (one, newkey)
-        else:
-            self.keys[name] = (newkey, two)
+                return
+        elif newkey == self.keys[name][not num]:  # if you chose
+            self.keys[name] = (two, one)    # swap em
+            return
+        elif newkey in [i for _, v in self.keys.items() for i in v]:
+            return  # already bound
+        self.keys[name] = (one, newkey) if num else (newkey, two)
 
     def get_keys(self, name):
         return self.keys[name.lower()]
