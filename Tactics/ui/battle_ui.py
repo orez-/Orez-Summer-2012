@@ -1,12 +1,13 @@
 import ui
 from cursor import Cursor
 from board import Board
+from constants import SCREEN_SIZE
 
 
 class BattleUI(ui.TacticsUI):
     def __init__(self, *args, **kwargs):
         super(BattleUI, self).__init__(*args, **kwargs)
-        self.size = (1000, 500)  # gotta find a better way to pass these
+        self.size = SCREEN_SIZE
 
         self.cursor = Cursor()
         self.board = Board((20, 20, 30), (40, 20, 10), self.size)

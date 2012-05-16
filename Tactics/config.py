@@ -4,6 +4,7 @@ import pygame
 class Config(object):
     CONTROLLER_MODE = 1
     KEYBOARD_MODE = 2
+
     def __init__(self):
         self.keymode = Config.CONTROLLER_MODE
 
@@ -28,32 +29,42 @@ class Config(object):
         self.K_PAUSE1 = pygame.K_RETURN
         self.K_PAUSE2 = None
 
-    def _check_key(self, event, keys):
-        s = filter(lambda k: k is not None, keys)
+    def get_keys(self, name):
+        keys = {"up": (self.K_UP1, self.K_UP2),
+                "left": (self.K_LEFT1, self.K_LEFT2),
+                "right": (self.K_RIGHT1, self.K_RIGHT2),
+                "down": (self.K_DOWN1, self.K_DOWN2),
+                "ok": (self.K_OK1, self.K_OK2),
+                "cancel": (self.K_CANCEL1, self.K_CANCEL2),
+                "pause": (self.K_PAUSE1, self.K_PAUSE2)}
+        return keys[name.lower()]
+
+    def _check_key(self, event, keyname):
+        s = filter(lambda k: k is not None, self.get_keys(keyname))
         return event in s or event.key in s
 
     def k_UP(self, event):
-        return self._check_key(event, (self.K_UP1, self.K_UP2))
+        return self._check_key(event, "up")
 
     def k_LEFT(self, event):
-        return self._check_key(event, (self.K_LEFT1, self.K_LEFT2))
+        return self._check_key(event, "left")
 
     def k_RIGHT(self, event):
-        return self._check_key(event, (self.K_RIGHT1, self.K_RIGHT2))
+        return self._check_key(event, "right")
 
     def k_DOWN(self, event):
-        return self._check_key(event, (self.K_DOWN1, self.K_DOWN2))
+        return self._check_key(event, "down")
 
     def k_OK(self, event):
-        return self._check_key(event, (self.K_OK1, self.K_OK2))
+        return self._check_key(event, "ok")
 
     def k_CANCEL(self, event):
         """ User pressed the 'cancel' key """
-        return self._check_key(event, (self.K_CANCEL1, self.K_CANCEL2))
+        return self._check_key(event, "cancel")
 
     def k_PAUSE(self, event):
         """ User pressed the 'pause' key """
-        return self._check_key(event, (self.K_PAUSE1, self.K_PAUSE2))
+        return self._check_key(event, "pause")
 
     def handle_key(self, event, ui):
         if self.keymode == Config.CONTROLLER_MODE:
@@ -78,4 +89,4 @@ class Config(object):
             ui.k_PAUSE()
 
     def _handle_keyboard(self, event, ui):
-        pass
+        ui.keydown(event)

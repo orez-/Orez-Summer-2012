@@ -20,7 +20,7 @@ class TeamUI(ui.TacticsUI):
         self.sidebar = Sidebar([
             ("Squad", lambda: self.set_mode(TeamUI.SQUAD_MODE)),
             ("Inventory", self.nothing),
-            ("Options", self.nothing),
+            ("Options", lambda: self.main.push_ui("config")),
             ("Save", self.nothing)])
         self.mode = TeamUI.MENU_MODE
 
@@ -82,7 +82,7 @@ class TeamUI(ui.TacticsUI):
     def k_DOWN(self):
         if self.mode == TeamUI.MENU_MODE:
             self.sidebar.selected = min(self.sidebar.selected + 1,
-                len(self.sidebar.options)-1)
+                len(self.sidebar.options) - 1)
             self.sidebar.redraw()
             self.redraw()
         elif self.mode == TeamUI.SQUAD_MODE:
@@ -98,7 +98,7 @@ class TeamUI(ui.TacticsUI):
 
     def k_CANCEL(self):
         if self.mode == TeamUI.MENU_MODE:
-            self.main.ui_back() # go back to the previous screen
+            self.main.ui_back()  # go back to the previous screen
         elif self.mode == TeamUI.SQUAD_MODE:
             self.set_mode(TeamUI.MENU_MODE)
 
@@ -110,7 +110,7 @@ class TeamUI(ui.TacticsUI):
 
     def keep_moving(self):
         pass
-        
+
     @staticmethod
     def name():
         return "team"
