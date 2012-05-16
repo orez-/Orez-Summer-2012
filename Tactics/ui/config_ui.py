@@ -28,9 +28,9 @@ class ConfigUI(ui.TacticsUI):
     def set_mode(self, mode):
         self.mode = mode
         if self.mode == ConfigUI.SELECT_MODE:
-            self.main.config.mode = Config.CONTROLLER_MODE
+            self.main.config.keymode = Config.CONTROLLER_MODE
         elif self.mode == ConfigUI.INPUT_MODE:
-            self.main.config.mode = Config.INPUT_MODE
+            self.main.config.keymode = Config.KEYBOARD_MODE
 
     def redraw_osurf(self):
         self.osurf.fill((0x00, 0x66, 0xFF))
@@ -77,7 +77,10 @@ class ConfigUI(ui.TacticsUI):
         screen.blit(self.surface, (0, 0))
 
     def keydown(self, event):
-        pass
+        self.main.config.set_key(self.options[self.selected // 2],
+            self.selected % 2, event.key)
+        self.set_mode(ConfigUI.SELECT_MODE)
+        self.redraw_osurf()
 
     def keyup(self, event):
         pass
@@ -109,7 +112,7 @@ class ConfigUI(ui.TacticsUI):
         self.main.ui_back()
 
     def k_OK(self):
-        pass
+        self.set_mode(ConfigUI.INPUT_MODE)
 
     @staticmethod
     def name():

@@ -8,36 +8,53 @@ class Config(object):
     def __init__(self):
         self.keymode = Config.CONTROLLER_MODE
 
-        self.K_UP1 = pygame.K_UP
-        self.K_UP2 = pygame.K_w
+        K_UP1 = pygame.K_UP
+        K_UP2 = pygame.K_w
 
-        self.K_LEFT1 = pygame.K_LEFT
-        self.K_LEFT2 = pygame.K_a
+        K_LEFT1 = pygame.K_LEFT
+        K_LEFT2 = pygame.K_a
 
-        self.K_RIGHT1 = pygame.K_RIGHT
-        self.K_RIGHT2 = pygame.K_d
+        K_RIGHT1 = pygame.K_RIGHT
+        K_RIGHT2 = pygame.K_d
 
-        self.K_DOWN1 = pygame.K_DOWN
-        self.K_DOWN2 = pygame.K_s
+        K_DOWN1 = pygame.K_DOWN
+        K_DOWN2 = pygame.K_s
 
-        self.K_OK1 = pygame.K_z
-        self.K_OK2 = pygame.K_SPACE
+        K_OK1 = pygame.K_z
+        K_OK2 = pygame.K_SPACE
 
-        self.K_CANCEL1 = pygame.K_x
-        self.K_CANCEL2 = None
+        K_CANCEL1 = pygame.K_x
+        K_CANCEL2 = None
 
-        self.K_PAUSE1 = pygame.K_RETURN
-        self.K_PAUSE2 = None
+        K_PAUSE1 = pygame.K_RETURN
+        K_PAUSE2 = None
+
+        self.keys = {"up": (K_UP1, K_UP2),
+                "left": (K_LEFT1, K_LEFT2),
+                "right": (K_RIGHT1, K_RIGHT2),
+                "down": (K_DOWN1, K_DOWN2),
+                "ok": (K_OK1, K_OK2),
+                "cancel": (K_CANCEL1, K_CANCEL2),
+                "pause": (K_PAUSE1, K_PAUSE2)}
+
+    def clear_key(self, name, num):
+        self.set_key(name, num, None)
+
+    def set_key(self, name, num, newkey):
+        name = name.lower()
+        one, two = self.keys[name]
+        if newkey is None:
+            if two is None:  # either we're setting None to None or we're
+                return       # trying to remove the key entirely
+            if not num:
+                self.keys[name] = (two, None)
+        if num:
+            self.keys[name] = (one, newkey)
+        else:
+            self.keys[name] = (newkey, two)
 
     def get_keys(self, name):
-        keys = {"up": (self.K_UP1, self.K_UP2),
-                "left": (self.K_LEFT1, self.K_LEFT2),
-                "right": (self.K_RIGHT1, self.K_RIGHT2),
-                "down": (self.K_DOWN1, self.K_DOWN2),
-                "ok": (self.K_OK1, self.K_OK2),
-                "cancel": (self.K_CANCEL1, self.K_CANCEL2),
-                "pause": (self.K_PAUSE1, self.K_PAUSE2)}
-        return keys[name.lower()]
+        return self.keys[name.lower()]
 
     def _check_key(self, event, keyname):
         s = filter(lambda k: k is not None, self.get_keys(keyname))
