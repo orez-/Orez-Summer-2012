@@ -87,6 +87,7 @@ class TeamUI(ui.TacticsUI):
             self.darksurface.fill((0, 0, 0, 1))
             self.darkstep = 0
         if self.mode == TeamUI.IN_MODE:
+            self.darksurface.fill((0, 0, 0, 255))
             self.darkstep = 0
 
     def k_UP(self):
