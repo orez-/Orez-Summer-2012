@@ -9,11 +9,12 @@ from ui.battle_ui import BattleUI
 from ui.overworld_ui import OverworldUI
 from ui.team_ui import TeamUI
 from ui.config_ui import ConfigUI
+from ui.unit_ui import UnitUI
 
 
 class Main:
     ui_list = {x.name(): x for x in (SkillUI, BattleUI, OverworldUI,
-        TeamUI, ConfigUI)}
+        TeamUI, ConfigUI, UnitUI)}
 
     def __init__(self):
         pygame.init()   # Initialize the game engine

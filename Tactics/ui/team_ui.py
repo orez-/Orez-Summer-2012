@@ -1,6 +1,8 @@
 import pygame
+import math
 
 import ui
+from ui import MenuUnit
 from unit import Unit
 from constants import SCREEN_SIZE
 
@@ -9,11 +11,17 @@ class TeamUI(ui.TacticsUI):
     """ Used on the overworld to deal with units/inventory """
     MENU_MODE = 1
     SQUAD_MODE = 2
+    OUT_MODE = 3
+    IN_MODE = 4
+
+    FADE_STEPS = 18
 
     def __init__(self, *args, **kwargs):
         super(TeamUI, self).__init__(*args, **kwargs)
         self.size = SCREEN_SIZE
         self.surface = pygame.Surface(self.size)
+        self.darksurface = pygame.Surface(self.size, pygame.SRCALPHA)
+        self.darkstep = 0
         self.units = [MenuUnit(Unit("trainee", name="Orez" + str(i)), i)
             for i in xrange(6)]
         self.highlighted = 0    # the highlighted unit
@@ -23,7 +31,6 @@ class TeamUI(ui.TacticsUI):
             ("Options", lambda: self.main.push_ui("config")),
             ("Save", self.nothing)])
         self.mode = TeamUI.MENU_MODE
-
         self.redraw()
 
     def nothing(self):
@@ -50,6 +57,9 @@ class TeamUI(ui.TacticsUI):
 
     def reblit(self, screen):
         screen.blit(self.surface, (0, 0))
+        if self.mode == TeamUI.OUT_MODE or self.mode == TeamUI.IN_MODE:
+            screen.blit(self.darksurface, (0, 0))
+            self.units[self.highlighted].reblit(screen)
 
     def keyup(self, event):
         pass
@@ -61,6 +71,9 @@ class TeamUI(ui.TacticsUI):
         elif self.mode == TeamUI.SQUAD_MODE:
             self.select_unit()
             self.redraw()
+        elif self.mode == TeamUI.OUT_MODE:
+            self.darksurface.fill((0, 0, 0, 0))
+            self.darkstep = 0
 
         self.mode = mode
 
@@ -70,6 +83,11 @@ class TeamUI(ui.TacticsUI):
         if self.mode == TeamUI.SQUAD_MODE:
             self.select_unit(self.highlighted, True)
             self.redraw()
+        if self.mode == TeamUI.OUT_MODE:
+            self.darksurface.fill((0, 0, 0, 1))
+            self.darkstep = 0
+        if self.mode == TeamUI.IN_MODE:
+            self.darkstep = 0
 
     def k_UP(self):
         if self.mode == TeamUI.MENU_MODE:
@@ -106,10 +124,35 @@ class TeamUI(ui.TacticsUI):
         if self.mode == TeamUI.MENU_MODE:
             self.sidebar.k_OK()
         elif self.mode == TeamUI.SQUAD_MODE:
-            pass    # haven't made this yet
+            self.set_mode(TeamUI.OUT_MODE)
 
     def keep_moving(self):
-        pass
+        if self.mode == TeamUI.OUT_MODE:
+            def on_done(to):
+                self.units[self.highlighted].loc = to
+                self.main.push_ui("unit")
+                self.main.ui.set_unit(self.units[self.highlighted])
+                self.set_mode(TeamUI.IN_MODE)
+            self.fade(True, on_done)
+        elif self.mode == TeamUI.IN_MODE:
+            def on_done(to):
+                self.units[self.highlighted].loc = self.units[self.highlighted].oloc
+                self.set_mode(TeamUI.SQUAD_MODE)
+            self.fade(False, on_done)
+
+    def fade(self, out, on_done):
+        to = 12, 12
+        if self.darkstep >= TeamUI.FADE_STEPS:
+            on_done(to)
+            return
+        d = math.cos((math.pi / 2) * self.darkstep / TeamUI.FADE_STEPS)
+        if not out:
+            d = 1 - d
+        self.units[self.highlighted].loc =\
+            ((self.units[self.highlighted].oloc[0] - to[0]) * d + to[0],
+             (self.units[self.highlighted].oloc[1] - to[1]) * d + to[1])
+        self.darksurface.fill((0, 0, 0, 255 - int(d * 255)))
+        self.darkstep += 1
 
     @staticmethod
     def name():
@@ -149,48 +192,6 @@ class Sidebar:
                 o = "> " + o
             self.surface.blit(self.font.render(o, True, wordcolor),
                 (7, 7 + 25 * i))
-
-    def reblit(self, screen):
-        screen.blit(self.surface, self.loc)
-
-
-class MenuUnit:
-    """ A unit shown in the menu """
-    size = (325, 150)
-    spacing = 12.5
-
-    def __init__(self, unit, loc):
-        self.portrait_size = (136, ) * 2
-        self.surface = pygame.Surface(self.size)
-        self.font = pygame.font.Font(None, 25)
-        self.unit = unit
-        spacing = MenuUnit.spacing
-        self.loc = (spacing + ((loc % 2) * (MenuUnit.size[0] + spacing)),
-            (loc // 2) * (MenuUnit.size[1] + spacing) + spacing
-            + ((loc % 2) * 2 - 1) * spacing / 2)
-        self.selected = False
-        self.redraw()
-
-    def set_selected(self, selected):
-        self.selected = selected
-        self.redraw()
-
-    def redraw(self):
-        color = (0x00, 0x66, 0xFF)
-        if self.selected:
-            color = (0x66, 0x88, 0xFF)
-        self.surface.fill(color)
-        pygame.draw.rect(self.surface, (0, ) * 3, ((0, 0), self.size), 3)
-
-        self.surface.fill((0x00, 0x33, 0x33), ((7, 7), self.portrait_size))
-        pygame.draw.rect(self.surface, (0, ) * 3, ((7, 7), self.portrait_size),
-            2)
-
-        self.surface.blit(self.font.render(self.unit.name, True, (0xFF, ) * 3),
-            (164, 6))
-        self.surface.blit(self.font.render("HP " + str(self.unit.get_cur_hp())
-            + "/" + str(self.unit.get_cur_hp()), True, (0xFF, ) * 3),
-            (164, 41))
 
     def reblit(self, screen):
         screen.blit(self.surface, self.loc)
