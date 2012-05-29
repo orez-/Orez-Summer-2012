@@ -75,7 +75,7 @@ class ConfigUI(ui.TacticsUI):
 
     def redraw(self):
         self.surface.fill((0x00, 0x33, 0x99))
-        self.surface.blit(self.osurf, (100, 100))
+        self.surface.blit(self.osurf, (100, 50))
 
     def reblit(self, screen):
         screen.blit(self.surface, (0, 0))
