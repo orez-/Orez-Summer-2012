@@ -10,6 +10,7 @@ PORT = 11173
 ADDR = (HOST,PORT)
 
 MAX_PACKET_LENGTH = 1024
+RS = chr(30)
 
 class Server(threading.Thread):
     CLOSED = 1
@@ -37,25 +38,32 @@ class Server(threading.Thread):
                     if x:
                         other_player = self.slots[0]["player"]
                     self.slots[x] = {"type":Server.PLAYER, "conn":conn,
-                        "player":Player(self.board, other_player)}
+                        "player":Player(self.board, other_player),
+                        "buffer":""}
                     conn.send("Hi!")
                 else:   # returning player's command
                     sender = self.get_sender(c)
                     message = self.slots[sender]["conn"].recv(MAX_PACKET_LENGTH)
                     if not message:  # close connection
-                        pass
-                    else:
-                        x = self.get_sender(c)
-                        msg = message.split(" ")
-                        if msg[0] == "MOVED":
-                            self.slots[x]["player"].move(int(msg[1]), int(msg[2]))
-                            self.broadcast(' '.join((msg[0], str(x), msg[1], msg[2])))
+                        c.close()
+                    else:   # a real command
+                        sender = self.get_sender(c)
+                        self.slots[sender]["buffer"] += message
 
+                        while RS in self.slots[sender]["buffer"]:
+                            term, _, self.slots[sender]["buffer"] = self.slots[sender]["buffer"].partition(RS)
+                            self.handle_input(sender, term)
+
+    def handle_input(self, slot, message):
+        msg = message.split(" ")
+        if msg[0] == "MOVED":
+            self.slots[slot]["player"].move(int(msg[1]), int(msg[2]))
+            self.broadcast(' '.join((msg[0], str(slot), msg[1], msg[2])))
 
     def broadcast(self, msg):
         for x in self.slots:
             if "conn" in x:
-                x["conn"].send(msg)
+                x["conn"].send(msg+RS)
 
     def process_received(self, msg):
         pass
@@ -96,33 +104,33 @@ class Client(threading.Thread):
             return
         self.sock.settimeout(0.5)
         while not self.done:
-            try:
-                message = self.sock.recv(MAX_PACKET_LENGTH)
-            except socket.timeout:
-                continue
-            if not message:
-                # an empty string indicates that the client has
-                # closed their connection
-                #print "closed connection"
-                self.done = True
-                self.sock.close()
-                break
-            else:
-                #self.recv_buf += message
-                print message
-                self.process_received(message)
-            #term, _, self.recv_buf = self.recv_buf.partition(RS) 
-            #self.process_message(term)
+            while not self.done and self.recv_buf.find(RS) == -1:
+                try:
+                    message = self.sock.recv(MAX_PACKET_LENGTH)
+                except socket.timeout:
+                    continue
+                if not message:
+                    # an empty string indicates that the client has
+                    # closed their connection
+                    #print "closed connection"
+                    self.done = True
+                    self.sock.close()
+                    break
+                else:
+                    self.recv_buf += message
+                    print message
+            if not self.done:
+                term, _, self.recv_buf = self.recv_buf.partition(RS) 
+                self.process_received(term)
 
     def stop(self):
         self.done = True
 
     def send(self, msg):
-        self.sock.send(msg)
-        #buf = message + RS
-        #while buf:
-        #    self.sock.send(buf[:MAX_PACKET_LENGTH])
-        #    buf = buf[MAX_PACKET_LENGTH:]
+        buf = msg + RS
+        while buf:
+            self.sock.send(buf[:MAX_PACKET_LENGTH])
+            buf = buf[MAX_PACKET_LENGTH:]
 
 
     def process_received(self, message):
