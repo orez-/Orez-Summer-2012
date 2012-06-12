@@ -1,12 +1,13 @@
 import pygame
 
-from constants import SCREEN_SIZE
+from constants import SCREEN_SIZE, SCREEN_RADIUS, TILE_SIZE
 
 
 class Tile:
     WALL = 0
     OPEN = 1
     BLOCK = 2
+    EXIT = 3
 
     BLOCKSIZE = 50
 
@@ -23,21 +24,79 @@ class Tile:
 
 
 class Player:
-    def __init__(self, board):
+    def __init__(self, board, teammate=None):
         self.x = 1
         self.y = 1
-        self.pic = pygame.image.load("imgs/me.png")
+        lookup = ["me", "you"]
+        self.pic = pygame.image.load("imgs/"+lookup[int(teammate is not None)]+".png")
         self.board = board
+        self.teammate = teammate
+        if self.teammate is not None:
+            self.teammate.teammate = self
 
-    def reblit(self, screen):
-        screen.blit(self.pic, map(lambda x: x * Tile.BLOCKSIZE, (self.x, self.y)))
+    def reblit(self, screen, center):
+        screen.blit(self.pic, map(lambda (x,y):
+            (y-x+SCREEN_RADIUS) * Tile.BLOCKSIZE,
+            zip(center, (self.x, self.y))))
 
     def move(self, x=0, y=0):
+        deactivate = None
+        if (self.x + x, self.y + y) == (self.teammate.x, self.teammate.y):
+            return False
+
+        if (self.y, self.x) in self.board.stuff:
+            deactivate = self.board.stuff[(self.y, self.x)]
+            if isinstance(deactivate, Beartrap) and deactivate.active:
+                return False
+
         newx = self.x + x
         newy = self.y + y
-        if self.board.push_block((newx, newy), (x, y)):
+        if self.board.push_block(self, (x, y)):
+            if deactivate is not None:
+                deactivate.unstep()
+
             self.x, self.y = newx, newy
 
+            if (newy, newx) in self.board.stuff:
+                stepped = self.board.stuff[(newy, newx)]
+                stepped.step()
+
+class Button:
+    def __init__(self, activates):
+        self.activates = activates
+
+    def step(self):
+        #print "Stepped on a button"
+        self.activates.activate()
+
+    def unstep(self):
+        #print "Got off the button"
+        self.activates.deactivate()
+
+    def reblit(self, surf, x, y):
+        pygame.draw.circle(surf, (128, 80, 0),
+            (int((x + .5) * Tile.BLOCKSIZE), int((y + .5) * Tile.BLOCKSIZE)), 5)
+
+class Beartrap:
+    def __init__(self):
+        self.active = True
+
+    def step(self):
+        #print "stepped on a beartrap"
+        pass
+
+    def unstep(self):
+        #print "got off a beartrap"
+        pass
+
+    def activate(self):
+        self.active = False
+
+    def deactivate(self):
+        self.active = True
+
+    def reblit(self, surf, x, y):
+        pygame.draw.circle(surf, (128, 80, 0), (int((x + .5) * Tile.BLOCKSIZE), int((y + .5) * Tile.BLOCKSIZE)), 20)
 
 class Board:
     def __init__(self):
@@ -53,19 +112,31 @@ class Board:
         self.data[5][5] = Tile.BLOCK
         self.data[5][3] = Tile.BLOCK
 
+        self.stuff = {}
+        x = Beartrap()
+        self.stuff[(2,2)] = x
+        self.stuff[(2,3)] = Button(x)
         self.surface = pygame.Surface(SCREEN_SIZE)
         self.redraw()
 
-    def push_block(self, (x, y), (dx, dy)):
+    def push_block(self, who, (dx, dy)):
+        x, y = who.x + dx, who.y + dy
         tile_type = self.data[y][x]
         if tile_type == Tile.WALL:
             return False
         elif tile_type == Tile.OPEN:
             return True
         elif tile_type == Tile.BLOCK:
+            if (y, x) in self.stuff:
+                if isinstance(self.stuff[(y,x)], Beartrap) and self.stuff[(y,x)].active:
+                    return False
             if self.data[y+dy][x+dx] == Tile.OPEN:
+                if (who.teammate.x, who.teammate.y) == (x+dx, y+dy):
+                    return False    # teammate in the way
                 self.data[y+dy][x+dx] = Tile.BLOCK
                 self.data[y][x] = Tile.OPEN
+                if (y+dy,x+dx) in self.stuff:
+                    self.stuff[(y+dy,x+dx)].step()
                 self.redraw()
                 return True
             return False
@@ -75,5 +146,8 @@ class Board:
             for x, elem in enumerate(row):
                 Tile.draw_tile(elem, self.surface, (x, y))
 
-    def reblit(self, surface):
-        surface.blit(self.surface, (0, 0))
+        for (y,x), v in self.stuff.items():
+            v.reblit(self.surface, x, y)
+
+    def reblit(self, surface, center):
+        surface.blit(self.surface, map(lambda x: (SCREEN_RADIUS - x) * TILE_SIZE, center))
