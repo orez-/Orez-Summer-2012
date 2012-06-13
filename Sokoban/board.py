@@ -8,6 +8,7 @@ class Tile:
     OPEN = 1
     BLOCK = 2
     EXIT = 3
+    WATER = 4
 
     BLOCKSIZE = 50
 
@@ -131,6 +132,8 @@ class Board:
         tile_type = self.data[y][x]
         if tile_type == Tile.WALL:
             return False
+        elif tile_type == Tile.WATER:   # needs some snorkel logic
+            return False
         elif tile_type == Tile.OPEN:
             return True
         elif tile_type == Tile.BLOCK:
@@ -144,6 +147,13 @@ class Board:
                 self.data[y][x] = Tile.OPEN
                 if (y+dy,x+dx) in self.stuff:
                     self.stuff[(y+dy,x+dx)].step()
+                self.redraw()
+                return True
+            if self.data[y+dy][x+dx] == Tile.WATER:
+                if (who.teammate.x, who.teammate.y) == (x+dx, y+dy):
+                    return False    # teammate in the way (snorkel logic!)
+                self.data[y+dy][x+dx] = Tile.OPEN   # maybe dirt someday
+                self.data[y][x] = Tile.OPEN
                 self.redraw()
                 return True
             return False
