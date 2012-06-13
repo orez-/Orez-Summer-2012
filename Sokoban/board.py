@@ -62,7 +62,8 @@ class Player:
                 stepped.step()
 
 class Button:
-    def __init__(self, activates):
+    def __init__(self, board, activates):
+        self.board = board
         self.activates = activates
 
     def step(self):
@@ -78,7 +79,8 @@ class Button:
             (int((x + .5) * Tile.BLOCKSIZE), int((y + .5) * Tile.BLOCKSIZE)), 5)
 
 class Beartrap:
-    def __init__(self):
+    def __init__(self, board):
+        self.board = board
         self.active = True
 
     def step(self):
@@ -91,12 +93,17 @@ class Beartrap:
 
     def activate(self):
         self.active = False
+        self.board.redraw()
 
     def deactivate(self):
         self.active = True
+        self.board.redraw()
 
     def reblit(self, surf, x, y):
-        pygame.draw.circle(surf, (128, 80, 0), (int((x + .5) * Tile.BLOCKSIZE), int((y + .5) * Tile.BLOCKSIZE)), 20)
+        color = (128, 80, 0)
+        if not self.active:
+            color = (80, 128, 0)
+        pygame.draw.circle(surf, color, (int((x + .5) * Tile.BLOCKSIZE), int((y + .5) * Tile.BLOCKSIZE)), 20)
 
 class Board:
     def __init__(self):
@@ -113,9 +120,9 @@ class Board:
         self.data[5][3] = Tile.BLOCK
 
         self.stuff = {}
-        x = Beartrap()
+        x = Beartrap(self)
         self.stuff[(2,2)] = x
-        self.stuff[(2,3)] = Button(x)
+        self.stuff[(2,3)] = Button(self, x)
         self.surface = pygame.Surface(SCREEN_SIZE)
         self.redraw()
 
