@@ -1,6 +1,6 @@
 import pygame
 
-from constants import SCREEN_SIZE, SCREEN_RADIUS, TILE_SIZE
+from constants import SCREEN_SIZE, SCREEN_RADIUS
 
 
 class Tile:
@@ -9,6 +9,7 @@ class Tile:
     BLOCK = 2
     EXIT = 3
     WATER = 4
+    GRAVEL = 5
 
     BLOCKSIZE = 50
 
@@ -20,14 +21,14 @@ class Tile:
     @staticmethod
     def draw_tile(tile, surf, (x, y)):
         surf.blit(Tile.TILESET, (x * Tile.BLOCKSIZE, y * Tile.BLOCKSIZE),
-            (tile * Tile.BLOCKSIZE, 0, (tile + 1) * Tile.BLOCKSIZE,
+            (tile * Tile.BLOCKSIZE, 0, Tile.BLOCKSIZE,
             Tile.BLOCKSIZE))
 
 
 class Player:
     def __init__(self, board, teammate=None):
-        self.x = 1
-        self.y = 1
+        self.x = 4
+        self.y = 17
         lookup = ["me", "you"]
         self.pic = pygame.image.load("imgs/"+lookup[int(teammate is not None)]+".png")
         self.board = board
@@ -108,23 +109,81 @@ class Beartrap:
 
 class Board:
     def __init__(self):
-        self.width = 10
-        self.height = 10
+        """
+        # 1,1
+        width = 10
+        height = 10
         
         self.data = (
-            [[Tile.WALL] * self.width] +
-            [[Tile.WALL] + [Tile.OPEN]*(self.width-2) + [Tile.WALL] for _ in xrange(self.height-2)] +
-            [[Tile.WALL] * self.width])
+            [[Tile.WALL] * width] +
+            [[Tile.WALL] + [Tile.OPEN]*(width-2) + [Tile.WALL] for _ in xrange(height-2)] +
+            [[Tile.WALL] * width])
         self.data[3][3] = Tile.BLOCK
         self.data[3][5] = Tile.BLOCK
         self.data[5][5] = Tile.BLOCK
         self.data[5][3] = Tile.BLOCK
+        self.data[4][4] = Tile.WATER
 
         self.stuff = {}
         x = Beartrap(self)
         self.stuff[(2,2)] = x
-        self.stuff[(2,3)] = Button(self, x)
-        self.surface = pygame.Surface(SCREEN_SIZE)
+        self.stuff[(2,3)] = Button(self, x)"""
+
+        """
+        # 4, 7
+        width = 9
+        height = 10
+        self.data = [[0,0,0,0,0,0,0,0,0],
+                     [0,0,0,0,1,0,0,0,0],
+                     [0,0,1,2,1,0,0,0,0],
+                     [0,0,1,0,1,0,0,0,0],
+                     [0,0,1,1,1,1,0,0,0],
+                     [0,0,1,0,0,0,0,0,0],
+                     [0,5,1,1,1,1,0,0,0],
+                     [0,5,1,1,1,1,4,3,0],
+                     [0,5,1,1,1,1,0,0,0],
+                     [0,0,0,0,0,0,0,0,0]]
+        self.stuff = {}"""
+
+
+        # 4, 17
+        self.data = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                     [0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0],
+                     [0,1,1,2,1,1,1,1,1,1,1,2,1,0,0,0,0],
+                     [0,1,1,1,1,1,1,1,1,2,1,1,1,0,0,0,0],
+                     [0,1,1,1,1,2,1,1,1,1,1,1,1,0,0,0,0],
+                     [0,1,1,1,2,1,1,1,1,1,1,1,1,0,0,0,0],
+                     [0,1,2,1,1,1,1,1,1,1,2,1,1,0,0,0,0],
+                     [0,1,1,1,1,1,1,1,2,1,1,1,1,1,1,3,0],
+                     [0,0,0,0,0,0,5,1,0,0,0,0,0,0,1,1,0],
+                     [0,0,0,0,0,0,4,1,4,1,1,1,1,1,1,1,0],
+                     [0,0,0,0,0,0,4,1,0,0,0,0,0,0,1,1,0],
+                     [0,0,0,0,0,0,4,1,0,0,0,0,0,0,0,0,0],
+                     [0,0,0,0,0,0,4,1,0,0,0,0,0,0,0,0,0],
+                     [0,0,0,0,0,0,4,1,0,0,0,0,0,0,0,0,0],
+                     [0,0,0,0,0,0,4,1,0,0,0,0,0,0,0,0,0],
+                     [0,0,0,0,0,0,4,1,0,0,0,0,0,0,0,0,0],
+                     [0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0],
+                     [0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0],
+                     [0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0],
+                     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]
+
+        width = len(self.data[0])
+        height = len(self.data)
+
+        self.stuff = {}
+        for i, (y,x) in enumerate(((6,2), (2,3), (5,4), (4,5), (7,8), (3,9), (6,10), (2,11))):
+            b = Beartrap(self)
+            self.stuff[(8+i, 7)] = b
+            self.stuff[(y, x)] = Button(self, b)
+        b = Beartrap(self)
+        self.stuff[(7, 13)] = b
+        self.stuff[(10, 14)] = Button(self, b)
+
+        self.surface = pygame.Surface(map(lambda x: x * Tile.BLOCKSIZE, (width, height)))
+        for (y,x), obj in self.stuff.items():
+            if isinstance(obj, Button) and self.data[y][x] == Tile.BLOCK:
+                obj.step()
         self.redraw()
 
     def push_block(self, who, (dx, dy)):
@@ -134,7 +193,7 @@ class Board:
             return False
         elif tile_type == Tile.WATER:   # needs some snorkel logic
             return False
-        elif tile_type == Tile.OPEN:
+        elif tile_type in (Tile.OPEN, Tile.GRAVEL):
             return True
         elif tile_type == Tile.BLOCK:
             if (y, x) in self.stuff:
@@ -167,4 +226,4 @@ class Board:
             v.reblit(self.surface, x, y)
 
     def reblit(self, surface, center):
-        surface.blit(self.surface, map(lambda x: (SCREEN_RADIUS - x) * TILE_SIZE, center))
+        surface.blit(self.surface, map(lambda x: (SCREEN_RADIUS - x) * Tile.BLOCKSIZE, center))
