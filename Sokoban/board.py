@@ -26,9 +26,10 @@ class Tile:
 
 
 class Player:
+    us_pic = pygame.image.load("imgs/us.png")
     def __init__(self, board, teammate=None):
-        self.x = 4
-        self.y = 17
+        self.x = 15
+        self.y = 5
         lookup = ["me", "you"]
         self.pic = pygame.image.load("imgs/"+lookup[int(teammate is not None)]+".png")
         self.board = board
@@ -36,10 +37,20 @@ class Player:
         if self.teammate is not None:
             self.teammate.teammate = self
 
+        self.time_trapped = False
+        self.snorkel = False
+
     def reblit(self, screen, center):
-        screen.blit(self.pic, map(lambda (x,y):
+        loc = map(lambda (x,y):
             (y-x+SCREEN_RADIUS) * Tile.BLOCKSIZE,
-            zip(center, (self.x, self.y))))
+            zip(center, (self.x, self.y)))
+        if (self.teammate.x, self.teammate.y) == (self.x, self.y):
+            screen.blit(Player.us_pic, loc)
+        else:
+            num = (self.time_trapped + self.snorkel * 2 +
+                (self.board.data[self.y][self.x] == Tile.WATER) * 4) * Tile.BLOCKSIZE
+            section = (num, 0, Tile.BLOCKSIZE, Tile.BLOCKSIZE)
+            screen.blit(self.pic, loc, section)
 
     def move(self, x=0, y=0):
         deactivate = None
@@ -53,22 +64,43 @@ class Player:
 
         newx = self.x + x
         newy = self.y + y
-        if self.board.push_block(self, (x, y)):
-            if deactivate is not None:
+        if self.board.move_player(self, (x, y)):
+            if deactivate is not None and self.board.data[self.y][self.x] != Tile.BLOCK:
                 deactivate.unstep()
 
             self.x, self.y = newx, newy
 
             if (newy, newx) in self.board.stuff:
                 stepped = self.board.stuff[(newy, newx)]
-                stepped.step()
+                stepped.step(self)
+
+class Snorkel:
+    def __init__(self, board):
+        self.board = board
+        self.img = pygame.image.load("imgs/tools.png")
+
+    def step(self, stepper=None):
+        if stepper is not None:
+            for (y,x), w in self.board.stuff.items():
+                if w is self:
+                    del self.board.stuff[(y, x)]
+                    self.board.redraw()
+                    break
+            stepper.snorkel = True
+
+    def unstep(self):
+        pass
+
+    def reblit(self, surf, x, y):
+        surf.blit(self.img, (x * Tile.BLOCKSIZE, y * Tile.BLOCKSIZE),
+            (0, 0, Tile.BLOCKSIZE, Tile.BLOCKSIZE))
 
 class Button:
     def __init__(self, board, activates):
         self.board = board
         self.activates = activates
 
-    def step(self):
+    def step(self, stepper=None):
         #print "Stepped on a button"
         self.activates.activate()
 
@@ -85,7 +117,7 @@ class Beartrap:
         self.board = board
         self.active = True
 
-    def step(self):
+    def step(self, stepper=None):
         #print "stepped on a beartrap"
         pass
 
@@ -106,6 +138,39 @@ class Beartrap:
         if not self.active:
             color = (80, 128, 0)
         pygame.draw.circle(surf, color, (int((x + .5) * Tile.BLOCKSIZE), int((y + .5) * Tile.BLOCKSIZE)), 20)
+
+class Walltrap:
+    def __init__(self, board):
+        self.board = board
+
+    def step(self, stepper=None):
+        for (y,x), w in self.board.stuff.items():
+            if w is self:
+                del self.board.stuff[(y,x)]
+                self.board.data[y][x] = Tile.WALL
+                break
+        self.board.redraw()
+
+    def reblit(self, surf, x, y):
+        color = (0x66, ) * 3
+        pygame.draw.circle(surf, color, (int((x + .5) * Tile.BLOCKSIZE), int((y + .5) * Tile.BLOCKSIZE)), 20)
+
+class Timetrap:
+    def __init__(self, board):
+        self.board = board
+
+    def step(self, stepper=None):
+        stepper.time_trapped = not stepper.time_trapped
+
+    def unstep(self):
+        pass
+
+    def reblit(self, surf, x, y):
+        circ = (int((x + .5) * Tile.BLOCKSIZE), int((y + .5) * Tile.BLOCKSIZE))
+        pygame.draw.circle(surf, (0xEF, 0xE4, 0xB0), circ, 20)
+        pygame.draw.circle(surf, (0, ) * 3, circ, 20, 1)
+        pygame.draw.line(surf, (0, ) * 3, circ, (circ[0] + 10, circ[1]))
+        pygame.draw.line(surf, (0, ) * 3, circ, (circ[0], circ[1] - 15))
 
 class Board:
     def __init__(self):
@@ -145,7 +210,7 @@ class Board:
                      [0,0,0,0,0,0,0,0,0]]
         self.stuff = {}"""
 
-
+        """
         # 4, 17
         self.data = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                      [0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0],
@@ -178,7 +243,58 @@ class Board:
             self.stuff[(y, x)] = Button(self, b)
         b = Beartrap(self)
         self.stuff[(7, 13)] = b
-        self.stuff[(10, 14)] = Button(self, b)
+        self.stuff[(10, 14)] = Button(self, b)"""
+
+        # 15, 5
+        self.data = map(lambda x: map(lambda y: int(y), x),
+                       ["0000000000000000000000000000000",
+                        "0002121121211110111111000000000",
+                        "0001121122211111111211000000000",
+                        "0002221111111110111112000000000",
+                        "0001111111111010101111000000000",
+                        "0001111111111011101111000000000",
+                        "0004050000001000001111000000000",
+                        "0114050011101000001111000010000",
+                        "0104411010101001421111111111110",
+                        "0200411110111001004444444111110",
+                        "0100400000000002000444444150000",
+                        "0000100000000000004404000000000",
+                        "0000000000001000121004000000000",
+                        "0000000000001110000001000000000",
+                        "0000000000312111111111000000000",
+                        "0000000000000000000000000000000"])
+        width = len(self.data[0])
+        height = len(self.data)
+        self.stuff = {}
+
+        self.stuff[(5, 14)] = Walltrap(self)
+        self.stuff[(5, 16)] = Walltrap(self)
+        self.stuff[(3, 14)] = Walltrap(self)
+        self.stuff[(3, 16)] = Walltrap(self)
+        self.stuff[(4, 16)] = Timetrap(self)
+        self.stuff[(7, 26)] = Timetrap(self)
+        self.stuff[(11, 4)] = Snorkel(self)
+
+        b = Beartrap(self)  # 1
+        self.stuff[(2, 15)] = b
+        self.stuff[(9, 15)] = Button(self, b)
+
+        b = Beartrap(self)  # 2
+        self.stuff[(14, 12)] = b
+        self.stuff[(13, 13)] = Button(self, b)
+
+        for i in xrange(4):
+            b = Beartrap(self)  # 3-6
+            self.stuff[(8, 22+i)] = b
+            self.stuff[(7, 18+i)] = Button(self, b)
+
+        b = Beartrap(self)  # 7
+        self.stuff[(14, 16)] = b
+        self.stuff[(12, 16)] = Button(self, b)
+
+        b = Beartrap(self)  # 8
+        self.stuff[(8, 15)] = b
+        self.stuff[(10, 1)] = Button(self, b)
 
         self.surface = pygame.Surface(map(lambda x: x * Tile.BLOCKSIZE, (width, height)))
         for (y,x), obj in self.stuff.items():
@@ -186,36 +302,74 @@ class Board:
                 obj.step()
         self.redraw()
 
-    def push_block(self, who, (dx, dy)):
+    def move_player(self, who, (dx, dy)):
+        x = self.can_move(who, (dx, dy))
+        if x is True:
+            if who.time_trapped:
+                if ((who.y+dy, who.x+dx) in self.stuff and
+                    isinstance(self.stuff[(who.y+dy, who.x+dx)], Beartrap) and
+                    self.stuff[(who.y+dy, who.x+dx)].active):
+                    return False
+                return self.pull_block(who, (dx, dy))
+            return True
+        if x is False:
+            return False
+        if x is Tile.BLOCK:
+            if who.time_trapped:
+                return False
+            return self.push_block(who, (dx, dy))
+
+    def can_move(self, who, (dx, dy)):
         x, y = who.x + dx, who.y + dy
         tile_type = self.data[y][x]
         if tile_type == Tile.WALL:
             return False
-        elif tile_type == Tile.WATER:   # needs some snorkel logic
-            return False
+        elif tile_type == Tile.WATER:
+            return who.snorkel
         elif tile_type in (Tile.OPEN, Tile.GRAVEL):
             return True
         elif tile_type == Tile.BLOCK:
-            if (y, x) in self.stuff:
-                if isinstance(self.stuff[(y,x)], Beartrap) and self.stuff[(y,x)].active:
-                    return False
-            if self.data[y+dy][x+dx] == Tile.OPEN:
-                if (who.teammate.x, who.teammate.y) == (x+dx, y+dy):
-                    return False    # teammate in the way
-                self.data[y+dy][x+dx] = Tile.BLOCK
-                self.data[y][x] = Tile.OPEN
-                if (y+dy,x+dx) in self.stuff:
-                    self.stuff[(y+dy,x+dx)].step()
+            return Tile.BLOCK
+
+    def pull_block(self, who, (dx, dy)):
+        """ Can be used at any time """
+        x, y = who.x + dx, who.y + dy
+        bx, by = who.x - dx, who.y - dy
+        if self.data[by][bx] == Tile.BLOCK:
+            if self.data[who.y][who.x] != Tile.GRAVEL:
+                self.data[by][bx] = Tile.OPEN
+                self.data[who.y][who.x] = Tile.BLOCK
+                if (by, bx) in self.stuff:
+                    self.stuff[(by, bx)].unstep()
                 self.redraw()
-                return True
-            if self.data[y+dy][x+dx] == Tile.WATER:
-                if (who.teammate.x, who.teammate.y) == (x+dx, y+dy):
-                    return False    # teammate in the way (snorkel logic!)
-                self.data[y+dy][x+dx] = Tile.OPEN   # maybe dirt someday
-                self.data[y][x] = Tile.OPEN
-                self.redraw()
-                return True
-            return False
+        return True
+
+    def push_block(self, who, (dx, dy)):
+        """ Assumes you're moving into a block (that is, not called frivolously)"""
+        x, y = who.x + dx, who.y + dy
+        if (y, x) in self.stuff:
+            if isinstance(self.stuff[(y,x)], Beartrap) and self.stuff[(y,x)].active:
+                return False
+        if (y+dy, x+dx) in self.stuff:
+            if isinstance(self.stuff[(y+dy, x+dx)], Walltrap):
+                return False
+        if self.data[y+dy][x+dx] == Tile.OPEN:
+            if (who.teammate.x, who.teammate.y) == (x+dx, y+dy):
+                return False    # teammate in the way
+            self.data[y+dy][x+dx] = Tile.BLOCK
+            self.data[y][x] = Tile.OPEN
+            if (y+dy,x+dx) in self.stuff:
+                self.stuff[(y+dy,x+dx)].step()
+            self.redraw()
+            return True
+        if self.data[y+dy][x+dx] == Tile.WATER:
+            if (who.teammate.x, who.teammate.y) == (x+dx, y+dy):
+                return False    # teammate in the way (snorkel logic!)
+            self.data[y+dy][x+dx] = Tile.OPEN   # maybe dirt someday
+            self.data[y][x] = Tile.OPEN
+            self.redraw()
+            return True
+        return False
 
     def redraw(self):
         for y, row in enumerate(self.data):

@@ -1,7 +1,6 @@
 import pygame
 
-from board import Board
-from board import Player
+from board import Board, Player
 
 class GameUI:
     def __init__(self, main, player2):
@@ -10,10 +9,11 @@ class GameUI:
         self.player1 = Player(self.board)
         self.player2 = Player(self.board, self.player1)
         self.which_player = player2
+        self.view_player = player2
 
     def reblit(self, screen):
         center = (self.player1.x, self.player1.y)
-        if self.which_player:
+        if self.view_player:
             center = (self.player2.x, self.player2.y)
         self.board.reblit(screen, center)
         self.player1.reblit(screen, center)
@@ -32,3 +32,9 @@ class GameUI:
         if event.key == pygame.K_RIGHT:
             #self.player1.move(x=1)
             self.main.send_msg("MOVED 1 0")
+        if event.key == pygame.K_TAB:
+            self.view_player = not self.which_player
+
+    def handle_key_up(self, event):
+        if event.key == pygame.K_TAB:
+            self.view_player = self.which_player

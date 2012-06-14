@@ -38,3 +38,6 @@ class MenuUI:
 
         if event.key == pygame.K_SPACE:
             self.options[self.selected][1]()
+
+    def handle_key_up(self, event):
+        pass

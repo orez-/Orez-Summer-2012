@@ -61,10 +61,8 @@ class Main:
                     self.stop()
                 elif event.type == pygame.KEYDOWN:
                     self.ui.handle_key(event)
-                    if event.key == pygame.K_r:
-                        self.ui = GameUI(self)
                 elif event.type == pygame.KEYUP:
-                    pass
+                    self.ui.handle_key_up(event)
 
             #self.ui.keep_moving()
             self.screen.fill((0, ) * 3)
