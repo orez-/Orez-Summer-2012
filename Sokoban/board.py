@@ -28,8 +28,8 @@ class Tile:
 class Player:
     us_pic = pygame.image.load("imgs/us.png")
     def __init__(self, board, teammate=None):
-        self.x = 15
-        self.y = 5
+        self.x = 5
+        self.y = 1
         lookup = ["me", "you"]
         self.pic = pygame.image.load("imgs/"+lookup[int(teammate is not None)]+".png")
         self.board = board
@@ -59,7 +59,7 @@ class Player:
 
         if (self.y, self.x) in self.board.stuff:
             deactivate = self.board.stuff[(self.y, self.x)]
-            if isinstance(deactivate, Beartrap) and deactivate.active:
+            if not self.time_trapped and isinstance(deactivate, Beartrap) and deactivate.active:
                 return False
 
         newx = self.x + x
@@ -233,9 +233,6 @@ class Board:
                      [0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0],
                      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]
 
-        width = len(self.data[0])
-        height = len(self.data)
-
         self.stuff = {}
         for i, (y,x) in enumerate(((6,2), (2,3), (5,4), (4,5), (7,8), (3,9), (6,10), (2,11))):
             b = Beartrap(self)
@@ -245,6 +242,7 @@ class Board:
         self.stuff[(7, 13)] = b
         self.stuff[(10, 14)] = Button(self, b)"""
 
+        """
         # 15, 5
         self.data = map(lambda x: map(lambda y: int(y), x),
                        ["0000000000000000000000000000000",
@@ -263,8 +261,6 @@ class Board:
                         "0000000000001110000001000000000",
                         "0000000000312111111111000000000",
                         "0000000000000000000000000000000"])
-        width = len(self.data[0])
-        height = len(self.data)
         self.stuff = {}
 
         self.stuff[(5, 14)] = Walltrap(self)
@@ -294,7 +290,31 @@ class Board:
 
         b = Beartrap(self)  # 8
         self.stuff[(8, 15)] = b
-        self.stuff[(10, 1)] = Button(self, b)
+        self.stuff[(10, 1)] = Button(self, b)"""
+
+        # 5, 1
+        self.data = map(lambda x: map(lambda y: int(y), x),
+                    ["0000000000000000",
+                     "0000110000000000",
+                     "0200110000010000",
+                     "0111111115114130",
+                     "0111111111110000",
+                     "0000000100000000",
+                     "0000000000000000"])
+
+        self.stuff = {}
+        self.stuff[(1, 4)] = Timetrap(self)
+        self.stuff[(2, 4)] = Walltrap(self)
+        self.stuff[(2, 5)] = Walltrap(self)
+        b = Beartrap(self)
+        self.stuff[(5, 7)] = b
+        self.stuff[(4, 1)] = Button(self, b)
+        b = Beartrap(self)
+        self.stuff[(2, 11)] = b
+        self.stuff[(3, 10)] = Button(self, b)
+
+        width = len(self.data[0])
+        height = len(self.data)
 
         self.surface = pygame.Surface(map(lambda x: x * Tile.BLOCKSIZE, (width, height)))
         for (y,x), obj in self.stuff.items():
