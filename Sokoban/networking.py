@@ -40,7 +40,8 @@ class Server(threading.Thread):
                     self.slots[x] = {"type":Server.PLAYER, "conn":conn,
                         "player":Player(self.board, other_player),
                         "buffer":""}
-                    conn.send("Hi!")
+                    if x:
+                        self.broadcast("START")  # TODO: probably want to send which map we're playing on
                 else:   # returning player's command
                     sender = self.get_sender(c)
                     message = self.slots[sender]["conn"].recv(MAX_PACKET_LENGTH)
@@ -91,7 +92,7 @@ class Client(threading.Thread):
             self.ADDR=(host, PORT)
         threading.Thread.__init__(self)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.msgs = Queue()
+        #self.msgs = Queue()
         self.done = False
         self.recv_buf = ''
 
@@ -99,8 +100,8 @@ class Client(threading.Thread):
         try:
             self.sock.connect(self.ADDR)
         except IOError:
-            print "Died"
-            self.msgs.put("DIE Network Error: Probably a bad IP address.")
+            print "Couldn't connect"
+            self.main.change_screen("no connect")
             return
         self.sock.settimeout(0.5)
         while not self.done:
@@ -141,3 +142,5 @@ class Client(threading.Thread):
             if person:
                 p = self.main.ui.player2
             p.move(dx, dy)
+        if msg[0] == "START":
+            self.main.change_screen("game")

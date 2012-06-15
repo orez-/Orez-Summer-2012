@@ -2,6 +2,7 @@ import pygame
 
 from ui.menu_ui import MenuUI
 from ui.game_ui import GameUI
+from ui.wait_ui import WaitUI
 from constants import SCREEN_SIZE
 from networking import Server, Client
 
@@ -31,12 +32,17 @@ class Main:
 
     def change_screen(self, which):
         if which == "game":
+            self.ui = GameUI(self, self.ui.player2)  # oh dis is bad.
+        if which == "host":
             self.start_server()
-            self.ui = GameUI(self, False)
+            self.ui = WaitUI(self, False)
             self.join_server()
         if which == "join":
-            self.ui = GameUI(self, True)
+            self.ui = WaitUI(self, True)
             self.join_server()
+        if which == "no connect":
+            self.ui = MenuUI(self, "Couldn't connect")
+            self.client = None
 
     def send_msg(self, msg):
         self.client.send(msg)
