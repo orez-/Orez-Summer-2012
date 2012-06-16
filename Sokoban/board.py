@@ -10,6 +10,7 @@ class Tile:
     EXIT = 3
     WATER = 4
     GRAVEL = 5
+    ICE = 6
 
     BLOCKSIZE = 50
 
@@ -27,9 +28,9 @@ class Tile:
 
 class Player:
     us_pic = pygame.image.load("imgs/us.png")
-    def __init__(self, board, teammate=None):
-        self.x = 5
-        self.y = 1
+    def __init__(self, board, (x, y), teammate=None):
+        self.x = x
+        self.y = y
         lookup = ["me", "you"]
         self.pic = pygame.image.load("imgs/"+lookup[int(teammate is not None)]+".png")
         self.board = board
@@ -39,8 +40,11 @@ class Player:
 
         self.time_trapped = False
         self.snorkel = False
+        self.ice_dir = None
 
     def reblit(self, screen, center):
+        if self.board.data[self.y][self.x] == Tile.ICE:
+            self.x, self.y = self.x + self.ice_dir[0], self.y + self.ice_dir[1]
         loc = map(lambda (x,y):
             (y-x+SCREEN_RADIUS) * Tile.BLOCKSIZE,
             zip(center, (self.x, self.y)))
@@ -74,9 +78,47 @@ class Player:
                 stepped = self.board.stuff[(newy, newx)]
                 stepped.step(self)
 
-class Snorkel:
+class TileFeature(object):
+    ID_TO_ITEM = None
+
     def __init__(self, board):
         self.board = board
+
+    def step(self, stepper):
+        pass
+
+    def unstep(self):
+        pass
+
+    def reblit(self, surf, x, y):
+        pass
+
+    @staticmethod
+    def build_ids():
+        TileFeature.ID_TO_ITEM = {
+            1:Snorkel,
+            2:Button,
+            3:Beartrap,
+            4:Walltrap,
+            5:Timetrap}
+        ITEM_TO_ID = {v:k for k,v in TileFeature.ID_TO_ITEM.items()}
+
+    @staticmethod
+    def id_to_item(idd):
+        if TileFeature.ID_TO_ITEM is None:
+            TileFeature.build_ids()
+        return TileFeature.ID_TO_ITEM[idd]
+
+    @staticmethod
+    def item_to_id(item):
+        if TileFeature.ID_TO_ITEM is None:
+            TileFeature.build_ids()
+        return TileFeature.ITEM_TO_ID[item]
+
+
+class Snorkel(TileFeature):
+    def __init__(self, board):
+        super(Snorkel, self).__init__(board)
         self.img = pygame.image.load("imgs/tools.png")
 
     def step(self, stepper=None):
@@ -88,14 +130,11 @@ class Snorkel:
                     break
             stepper.snorkel = True
 
-    def unstep(self):
-        pass
-
     def reblit(self, surf, x, y):
         surf.blit(self.img, (x * Tile.BLOCKSIZE, y * Tile.BLOCKSIZE),
             (0, 0, Tile.BLOCKSIZE, Tile.BLOCKSIZE))
 
-class Button:
+class Button(TileFeature):
     def __init__(self, board, activates):
         self.board = board
         self.activates = activates
@@ -112,18 +151,10 @@ class Button:
         pygame.draw.circle(surf, (128, 80, 0),
             (int((x + .5) * Tile.BLOCKSIZE), int((y + .5) * Tile.BLOCKSIZE)), 5)
 
-class Beartrap:
+class Beartrap(TileFeature):
     def __init__(self, board):
         self.board = board
         self.active = True
-
-    def step(self, stepper=None):
-        #print "stepped on a beartrap"
-        pass
-
-    def unstep(self):
-        #print "got off a beartrap"
-        pass
 
     def activate(self):
         self.active = False
@@ -139,7 +170,7 @@ class Beartrap:
             color = (80, 128, 0)
         pygame.draw.circle(surf, color, (int((x + .5) * Tile.BLOCKSIZE), int((y + .5) * Tile.BLOCKSIZE)), 20)
 
-class Walltrap:
+class Walltrap(TileFeature):
     def __init__(self, board):
         self.board = board
 
@@ -155,15 +186,12 @@ class Walltrap:
         color = (0x66, ) * 3
         pygame.draw.circle(surf, color, (int((x + .5) * Tile.BLOCKSIZE), int((y + .5) * Tile.BLOCKSIZE)), 20)
 
-class Timetrap:
+class Timetrap(TileFeature):
     def __init__(self, board):
         self.board = board
 
     def step(self, stepper=None):
         stepper.time_trapped = not stepper.time_trapped
-
-    def unstep(self):
-        pass
 
     def reblit(self, surf, x, y):
         circ = (int((x + .5) * Tile.BLOCKSIZE), int((y + .5) * Tile.BLOCKSIZE))
@@ -173,7 +201,7 @@ class Timetrap:
         pygame.draw.line(surf, (0, ) * 3, circ, (circ[0], circ[1] - 15))
 
 class Board:
-    def __init__(self):
+    def __init__(self, tiles=None):
         """
         # 1,1
         width = 10
@@ -292,6 +320,7 @@ class Board:
         self.stuff[(8, 15)] = b
         self.stuff[(10, 1)] = Button(self, b)"""
 
+        """
         # 5, 1
         self.data = map(lambda x: map(lambda y: int(y), x),
                     ["0000000000000000",
@@ -312,11 +341,62 @@ class Board:
         b = Beartrap(self)
         self.stuff[(2, 11)] = b
         self.stuff[(3, 10)] = Button(self, b)
+        """
+
+        """# 5, 10
+        self.data = map(lambda x: map(lambda y: int(y), x),
+                    ["0000000000000000",
+                     "0000000001000000",
+                     "0000000001210000",
+                     "0000041301110000",
+                     "0000010001120000",
+                     "0000111011110000",
+                     "0010010000011110",
+                     "0011161111110020",
+                     "0011161111110110",
+                     "0011161111110010",
+                     "0111111111111000",
+                     "0111111111111000",
+                     "0110000000000000",
+                     "0000000000000000"])
+
+        self.stuff = {}
+        b = Beartrap(self)  # 1
+        self.stuff[(6, 11)] = b
+        self.stuff[(4, 5)] = Button(self, b)
+
+        b = Beartrap(self)  # 2
+        self.stuff[(3, 6)] = b
+        self.stuff[(5, 6)] = Button(self, b)
+
+        b = Beartrap(self)  # 3
+        self.stuff[(5, 4)] = b
+        self.stuff[(8, 13)] = Button(self, b)
+
+        b = Beartrap(self)  # 4
+        self.stuff[(10, 4)] = b
+        self.stuff[(6, 2)] = Button(self, b)
+
+        b = Beartrap(self)  # 5
+        self.stuff[(10, 12)] = b
+        self.stuff[(6, 12)] = Button(self, b)
+
+        b = Beartrap(self)  # 6
+        self.stuff[(10, 6)] = b
+        self.stuff[(8, 14)] = Button(self, b)
+
+        self.stuff[(12, 1)] = Walltrap(self)
+        self.stuff[(12, 2)] = Walltrap(self)
+        """
+        self.data = tiles
 
         width = len(self.data[0])
         height = len(self.data)
 
         self.surface = pygame.Surface(map(lambda x: x * Tile.BLOCKSIZE, (width, height)))
+
+    def add_stuff(self, stuff):
+        self.stuff = stuff
         for (y,x), obj in self.stuff.items():
             if isinstance(obj, Button) and self.data[y][x] == Tile.BLOCK:
                 obj.step()
@@ -350,6 +430,9 @@ class Board:
             return True
         elif tile_type == Tile.BLOCK:
             return Tile.BLOCK
+        elif tile_type == Tile.ICE:
+            who.ice_dir = (dx, dy)
+            return True
 
     def pull_block(self, who, (dx, dy)):
         """ Can be used at any time """

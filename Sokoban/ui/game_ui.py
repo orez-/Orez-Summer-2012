@@ -1,13 +1,15 @@
 import pygame
 
-from board import Board, Player
+from board import Player
+from level_save import LevelLoad
 
 class GameUI:
-    def __init__(self, main, player2):
+    def __init__(self, main, player2, level="level1"):
         self.main = main
-        self.board = Board()
-        self.player1 = Player(self.board)
-        self.player2 = Player(self.board, self.player1)
+        loc, self.board = LevelLoad.load_level(level)
+        #self.board = Board()
+        self.player1 = Player(self.board, loc)
+        self.player2 = Player(self.board, loc, self.player1)
         self.which_player = player2
         self.view_player = player2
 

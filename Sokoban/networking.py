@@ -21,7 +21,7 @@ class Server(threading.Thread):
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind(ADDR)
         self.done = False
-        self.board = Board()
+        self.board = Board([[]])
         self.slots = [{"type":Server.CLOSED} for _ in xrange(2)]
 
     def run(self):
@@ -38,7 +38,7 @@ class Server(threading.Thread):
                     if x:
                         other_player = self.slots[0]["player"]
                     self.slots[x] = {"type":Server.PLAYER, "conn":conn,
-                        "player":Player(self.board, other_player),
+                        "player":Player(self.board, (0,0), other_player),
                         "buffer":""}
                     if x:
                         self.broadcast("START")  # TODO: probably want to send which map we're playing on
