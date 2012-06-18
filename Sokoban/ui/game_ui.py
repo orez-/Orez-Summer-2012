@@ -4,7 +4,7 @@ from board import Player
 from level_save import LevelLoad
 
 class GameUI:
-    def __init__(self, main, player2, level="level1"):
+    def __init__(self, main, player2, level="division_of_labor"):
         self.main = main
         loc, self.board = LevelLoad.load_level(level)
         #self.board = Board()

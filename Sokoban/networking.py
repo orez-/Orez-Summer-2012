@@ -22,6 +22,7 @@ class Server(threading.Thread):
         self.sock.bind(ADDR)
         self.done = False
         self.board = Board([[]])
+        self.board.add_stuff({})
         self.slots = [{"type":Server.CLOSED} for _ in xrange(2)]
 
     def run(self):
@@ -58,7 +59,7 @@ class Server(threading.Thread):
     def handle_input(self, slot, message):
         msg = message.split(" ")
         if msg[0] == "MOVED":
-            self.slots[slot]["player"].move(int(msg[1]), int(msg[2]))
+            #self.slots[slot]["player"].move(int(msg[1]), int(msg[2]))
             self.broadcast(' '.join((msg[0], str(slot), msg[1], msg[2])))
 
     def broadcast(self, msg):

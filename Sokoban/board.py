@@ -58,8 +58,6 @@ class Player:
 
     def move(self, x=0, y=0):
         deactivate = None
-        if (self.x + x, self.y + y) == (self.teammate.x, self.teammate.y):
-            return False
 
         if (self.y, self.x) in self.board.stuff:
             deactivate = self.board.stuff[(self.y, self.x)]
@@ -84,7 +82,7 @@ class TileFeature(object):
     def __init__(self, board):
         self.board = board
 
-    def step(self, stepper):
+    def step(self, stepper=None):
         pass
 
     def unstep(self):
@@ -202,192 +200,6 @@ class Timetrap(TileFeature):
 
 class Board:
     def __init__(self, tiles=None):
-        """
-        # 1,1
-        width = 10
-        height = 10
-        
-        self.data = (
-            [[Tile.WALL] * width] +
-            [[Tile.WALL] + [Tile.OPEN]*(width-2) + [Tile.WALL] for _ in xrange(height-2)] +
-            [[Tile.WALL] * width])
-        self.data[3][3] = Tile.BLOCK
-        self.data[3][5] = Tile.BLOCK
-        self.data[5][5] = Tile.BLOCK
-        self.data[5][3] = Tile.BLOCK
-        self.data[4][4] = Tile.WATER
-
-        self.stuff = {}
-        x = Beartrap(self)
-        self.stuff[(2,2)] = x
-        self.stuff[(2,3)] = Button(self, x)"""
-
-        """
-        # 4, 7
-        width = 9
-        height = 10
-        self.data = [[0,0,0,0,0,0,0,0,0],
-                     [0,0,0,0,1,0,0,0,0],
-                     [0,0,1,2,1,0,0,0,0],
-                     [0,0,1,0,1,0,0,0,0],
-                     [0,0,1,1,1,1,0,0,0],
-                     [0,0,1,0,0,0,0,0,0],
-                     [0,5,1,1,1,1,0,0,0],
-                     [0,5,1,1,1,1,4,3,0],
-                     [0,5,1,1,1,1,0,0,0],
-                     [0,0,0,0,0,0,0,0,0]]
-        self.stuff = {}"""
-
-        """
-        # 4, 17
-        self.data = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                     [0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0],
-                     [0,1,1,2,1,1,1,1,1,1,1,2,1,0,0,0,0],
-                     [0,1,1,1,1,1,1,1,1,2,1,1,1,0,0,0,0],
-                     [0,1,1,1,1,2,1,1,1,1,1,1,1,0,0,0,0],
-                     [0,1,1,1,2,1,1,1,1,1,1,1,1,0,0,0,0],
-                     [0,1,2,1,1,1,1,1,1,1,2,1,1,0,0,0,0],
-                     [0,1,1,1,1,1,1,1,2,1,1,1,1,1,1,3,0],
-                     [0,0,0,0,0,0,5,1,0,0,0,0,0,0,1,1,0],
-                     [0,0,0,0,0,0,4,1,4,1,1,1,1,1,1,1,0],
-                     [0,0,0,0,0,0,4,1,0,0,0,0,0,0,1,1,0],
-                     [0,0,0,0,0,0,4,1,0,0,0,0,0,0,0,0,0],
-                     [0,0,0,0,0,0,4,1,0,0,0,0,0,0,0,0,0],
-                     [0,0,0,0,0,0,4,1,0,0,0,0,0,0,0,0,0],
-                     [0,0,0,0,0,0,4,1,0,0,0,0,0,0,0,0,0],
-                     [0,0,0,0,0,0,4,1,0,0,0,0,0,0,0,0,0],
-                     [0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0],
-                     [0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0],
-                     [0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0],
-                     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]
-
-        self.stuff = {}
-        for i, (y,x) in enumerate(((6,2), (2,3), (5,4), (4,5), (7,8), (3,9), (6,10), (2,11))):
-            b = Beartrap(self)
-            self.stuff[(8+i, 7)] = b
-            self.stuff[(y, x)] = Button(self, b)
-        b = Beartrap(self)
-        self.stuff[(7, 13)] = b
-        self.stuff[(10, 14)] = Button(self, b)"""
-
-        """
-        # 15, 5
-        self.data = map(lambda x: map(lambda y: int(y), x),
-                       ["0000000000000000000000000000000",
-                        "0002121121211110111111000000000",
-                        "0001121122211111111211000000000",
-                        "0002221111111110111112000000000",
-                        "0001111111111010101111000000000",
-                        "0001111111111011101111000000000",
-                        "0004050000001000001111000000000",
-                        "0114050011101000001111000010000",
-                        "0104411010101001421111111111110",
-                        "0200411110111001004444444111110",
-                        "0100400000000002000444444150000",
-                        "0000100000000000004404000000000",
-                        "0000000000001000121004000000000",
-                        "0000000000001110000001000000000",
-                        "0000000000312111111111000000000",
-                        "0000000000000000000000000000000"])
-        self.stuff = {}
-
-        self.stuff[(5, 14)] = Walltrap(self)
-        self.stuff[(5, 16)] = Walltrap(self)
-        self.stuff[(3, 14)] = Walltrap(self)
-        self.stuff[(3, 16)] = Walltrap(self)
-        self.stuff[(4, 16)] = Timetrap(self)
-        self.stuff[(7, 26)] = Timetrap(self)
-        self.stuff[(11, 4)] = Snorkel(self)
-
-        b = Beartrap(self)  # 1
-        self.stuff[(2, 15)] = b
-        self.stuff[(9, 15)] = Button(self, b)
-
-        b = Beartrap(self)  # 2
-        self.stuff[(14, 12)] = b
-        self.stuff[(13, 13)] = Button(self, b)
-
-        for i in xrange(4):
-            b = Beartrap(self)  # 3-6
-            self.stuff[(8, 22+i)] = b
-            self.stuff[(7, 18+i)] = Button(self, b)
-
-        b = Beartrap(self)  # 7
-        self.stuff[(14, 16)] = b
-        self.stuff[(12, 16)] = Button(self, b)
-
-        b = Beartrap(self)  # 8
-        self.stuff[(8, 15)] = b
-        self.stuff[(10, 1)] = Button(self, b)"""
-
-        """
-        # 5, 1
-        self.data = map(lambda x: map(lambda y: int(y), x),
-                    ["0000000000000000",
-                     "0000110000000000",
-                     "0200110000010000",
-                     "0111111115114130",
-                     "0111111111110000",
-                     "0000000100000000",
-                     "0000000000000000"])
-
-        self.stuff = {}
-        self.stuff[(1, 4)] = Timetrap(self)
-        self.stuff[(2, 4)] = Walltrap(self)
-        self.stuff[(2, 5)] = Walltrap(self)
-        b = Beartrap(self)
-        self.stuff[(5, 7)] = b
-        self.stuff[(4, 1)] = Button(self, b)
-        b = Beartrap(self)
-        self.stuff[(2, 11)] = b
-        self.stuff[(3, 10)] = Button(self, b)
-        """
-
-        """# 5, 10
-        self.data = map(lambda x: map(lambda y: int(y), x),
-                    ["0000000000000000",
-                     "0000000001000000",
-                     "0000000001210000",
-                     "0000041301110000",
-                     "0000010001120000",
-                     "0000111011110000",
-                     "0010010000011110",
-                     "0011161111110020",
-                     "0011161111110110",
-                     "0011161111110010",
-                     "0111111111111000",
-                     "0111111111111000",
-                     "0110000000000000",
-                     "0000000000000000"])
-
-        self.stuff = {}
-        b = Beartrap(self)  # 1
-        self.stuff[(6, 11)] = b
-        self.stuff[(4, 5)] = Button(self, b)
-
-        b = Beartrap(self)  # 2
-        self.stuff[(3, 6)] = b
-        self.stuff[(5, 6)] = Button(self, b)
-
-        b = Beartrap(self)  # 3
-        self.stuff[(5, 4)] = b
-        self.stuff[(8, 13)] = Button(self, b)
-
-        b = Beartrap(self)  # 4
-        self.stuff[(10, 4)] = b
-        self.stuff[(6, 2)] = Button(self, b)
-
-        b = Beartrap(self)  # 5
-        self.stuff[(10, 12)] = b
-        self.stuff[(6, 12)] = Button(self, b)
-
-        b = Beartrap(self)  # 6
-        self.stuff[(10, 6)] = b
-        self.stuff[(8, 14)] = Button(self, b)
-
-        self.stuff[(12, 1)] = Walltrap(self)
-        self.stuff[(12, 2)] = Walltrap(self)
-        """
         self.data = tiles
 
         width = len(self.data[0])
@@ -422,6 +234,9 @@ class Board:
     def can_move(self, who, (dx, dy)):
         x, y = who.x + dx, who.y + dy
         tile_type = self.data[y][x]
+        if (x, y) == (who.teammate.x, who.teammate.y):
+            return tile_type == Tile.EXIT
+
         if tile_type == Tile.WALL:
             return False
         elif tile_type == Tile.WATER:
@@ -432,6 +247,8 @@ class Board:
             return Tile.BLOCK
         elif tile_type == Tile.ICE:
             who.ice_dir = (dx, dy)
+            return True
+        elif tile_type == Tile.EXIT:
             return True
 
     def pull_block(self, who, (dx, dy)):
@@ -458,7 +275,7 @@ class Board:
                 return False
         if self.data[y+dy][x+dx] == Tile.OPEN:
             if (who.teammate.x, who.teammate.y) == (x+dx, y+dy):
-                return False    # teammate in the way
+                return False    # teammate in the way of the block
             self.data[y+dy][x+dx] = Tile.BLOCK
             self.data[y][x] = Tile.OPEN
             if (y+dy,x+dx) in self.stuff:
