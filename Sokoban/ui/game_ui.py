@@ -10,6 +10,7 @@ class GameUI:
     TYPE_MODE = 2
 
     def __init__(self, main, player2, level="division_of_labor"):
+        self.level_name = level
         self.main = main
         loc, self.board = LevelLoad.load_level(level)
         #self.board = Board()
@@ -20,6 +21,9 @@ class GameUI:
 
         self.chatbox = Chatbox()
         self.mode = GameUI.PLAY_MODE
+
+    def reload_level(self):
+        return GameUI(self.main, self.which_player, self.level_name)
 
     def reblit(self, screen):
         center = (self.player1.x, self.player1.y)

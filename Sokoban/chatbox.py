@@ -102,7 +102,7 @@ class Chatbox:
         #self.view.fill((0,0,0,64))
         #self.view.blit(self.surface, (0, self.view.get_height()-self.surface.get_height()))
         # TODO: maybe make it keep track of scroll (instead of scrolling to the bottom)
-        
+
     def split_message(self, msg):
         wid = 0
         toR = []
@@ -125,7 +125,6 @@ class Chatbox:
                                      # (or worse USUSbad)
             colorless = re.sub(US+r"\d\d", "", msg[0])
             word_width = CHAT_FONT.size(colorless)[0]
-            print msg[0], word_width
             if word_width+wid > screenwid:  # nextline
                 wid = 0
                 toR += [line]

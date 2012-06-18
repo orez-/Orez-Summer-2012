@@ -26,7 +26,10 @@ class Server(threading.Thread):
         self.slots = [{"type":Server.CLOSED} for _ in xrange(2)]
 
         self.polls = {}
-        self.poll_commands = {"restart": lambda: None}
+        self.poll_commands = {"restart": self.cmd_restart}
+
+    def cmd_restart(self):
+        self.broadcast("RESTART")
 
     def run(self):
         self.sock.listen(2)
@@ -175,3 +178,5 @@ class Client(threading.Thread):
             self.main.change_screen("game")
         if msg[0] == "MSG":
             self.main.ui.chatbox.message(int(msg[1]), ' '.join(msg[2:]))
+        if msg[0] == "RESTART":
+            self.main.restart()

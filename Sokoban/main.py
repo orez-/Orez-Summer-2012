@@ -30,6 +30,9 @@ class Main:
         self.server = Server()
         self.server.start()
 
+    def restart(self):
+        self.ui = self.ui.reload_level()
+
     def change_screen(self, which):
         if which == "game":
             self.ui = GameUI(self, self.ui.player2)  # oh dis is bad.
