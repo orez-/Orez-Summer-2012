@@ -1,7 +1,7 @@
 import pygame
 import random
 
-from constants import SCREEN_SIZE
+from constants import SCREEN_SIZE, get_noun, get_adjective
 
 class WaitUI:
     def __init__(self, main, player2):
@@ -24,21 +24,9 @@ class WaitUI:
         self.me.fill((0xFF, ) * 3)
         self.me.blit(me_tiles, (0, 0), (0, 0, TS, TS))
 
-        self.adjective = random.choice(["valiant", "attractive", "helpful",
-                    "lovely", "clever", "intelligent", "brave", "noble",
-                    "spunky", "stalwart", "worthy", "audacious", "adventurous",
-                    "heroic", "fearless", "steadfast", "admirable", "skillful",
-                    "top-notch", "peerless", "incomparable", "invaluable",
-                    "distinguished", "astute", "apt", "brilliant",
-                    "resourceful", "wise", "spirited", "crafty",
-                    "second-to-none", "handy", "perspicacious", "inimitable",
-                    "indispensable", "dashing"])
-        self.noun = random.choice(["teammate", "cohort", "partner-in-crime",
-                    "partner", "helper", "aide", "ally", "collaborator",
-                    "colleague", "assistant", "pal", "compatriot", "companion",
-                    "buddy", "chum", "accomplice", "confederate",
-                    "sidekick", "consort", "co-conspirator", "friend",
-                    "compadre"])
+        self.adjective = get_adjective()
+        self.noun = get_noun()
+
         self.redraw_teammate_words()
         self.redraw_join_words()
 

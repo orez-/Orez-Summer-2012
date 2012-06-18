@@ -4,13 +4,13 @@ import select
 from Queue import Queue
 
 from board import Player, Board
+from constants import RS, US, get_noun
 
 HOST = socket.gethostname()
 PORT = 11173
 ADDR = (HOST,PORT)
 
 MAX_PACKET_LENGTH = 1024
-RS = chr(30)
 
 class Server(threading.Thread):
     CLOSED = 1
@@ -24,6 +24,9 @@ class Server(threading.Thread):
         self.board = Board([[]])
         self.board.add_stuff({})
         self.slots = [{"type":Server.CLOSED} for _ in xrange(2)]
+
+        self.polls = {}
+        self.poll_commands = {"restart": lambda: None}
 
     def run(self):
         self.sock.listen(2)
@@ -61,11 +64,37 @@ class Server(threading.Thread):
         if msg[0] == "MOVED":
             #self.slots[slot]["player"].move(int(msg[1]), int(msg[2]))
             self.broadcast(' '.join((msg[0], str(slot), msg[1], msg[2])))
+        if msg[0] == "MSG":
+            if msg[1][:1] == "/":
+                command = msg[1][1:]
+                if command in self.poll_commands:
+                    if command in self.polls and self.polls[command] != slot:
+                        del self.polls[command]
+                        self.poll_commands[command]()  # maybe pass some params
+                    else:
+                        self.polls[command] = slot
+                        self.broadcast("MSG 3 Your " + US + "0" + str(slot) +
+                            get_noun() + US + "03 has requested a " + command +
+                            ". Type " + US + "0" + str(int(not slot)) + "/" +
+                            command + US + "03 to allow.")
+                else:
+                    if command == "help":
+                        self.send("MSG 2 The following commands are available: " +
+                            ', '.join(self.poll_commands), slot)
+                    else:
+                        self.send("MSG 2 Unknown command: "+command, slot)
+            else:
+                self.broadcast(' '.join([msg[0], str(slot)] + msg[1:]))
+
+    def send(self, msg, contact):
+        if isinstance(contact, int):
+            contact = self.slots[contact]
+        contact["conn"].send(msg+RS)
 
     def broadcast(self, msg):
         for x in self.slots:
             if "conn" in x:
-                x["conn"].send(msg+RS)
+                self.send(msg, x)
 
     def process_received(self, msg):
         pass
@@ -134,7 +163,6 @@ class Client(threading.Thread):
             self.sock.send(buf[:MAX_PACKET_LENGTH])
             buf = buf[MAX_PACKET_LENGTH:]
 
-
     def process_received(self, message):
         msg = message.split(" ")
         if msg[0] == "MOVED":
@@ -145,3 +173,5 @@ class Client(threading.Thread):
             p.move(dx, dy)
         if msg[0] == "START":
             self.main.change_screen("game")
+        if msg[0] == "MSG":
+            self.main.ui.chatbox.message(int(msg[1]), ' '.join(msg[2:]))
