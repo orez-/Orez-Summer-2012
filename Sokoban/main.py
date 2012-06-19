@@ -3,6 +3,7 @@ import pygame
 from ui.menu_ui import MenuUI
 from ui.game_ui import GameUI
 from ui.wait_ui import WaitUI
+from ui.editor_ui import EditorUI
 from constants import SCREEN_SIZE
 from networking import Server, Client
 
@@ -34,6 +35,8 @@ class Main:
         self.ui = self.ui.reload_level()
 
     def change_screen(self, which):
+        if which == "editor":
+            self.ui = EditorUI(self)
         if which == "game":
             self.ui = GameUI(self, self.ui.player2)  # oh dis is bad.
         if which == "host":
@@ -46,6 +49,9 @@ class Main:
         if which == "no connect":
             self.ui = MenuUI(self, "Couldn't connect")
             self.client = None
+        if which == "main":
+            self.stop_multiplayer()
+            self.ui = MenuUI(self)
 
     def send_msg(self, msg):
         self.client.send(msg)
@@ -54,12 +60,15 @@ class Main:
         self.client = Client(self)
         self.client.start()
 
-    def stop(self):
-        self.done = True
+    def stop_multiplayer(self):
         if self.server is not None:
             self.server.stop()
         if self.client is not None:
             self.client.stop()
+
+    def stop(self):
+        self.done = True
+        self.stop_multiplayer()
 
     def run(self):
         restart = False
@@ -72,6 +81,10 @@ class Main:
                     self.ui.handle_key(event)
                 elif event.type == pygame.KEYUP:
                     self.ui.handle_key_up(event)
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    self.ui.handle_click(event)
+                elif event.type == pygame.MOUSEMOTION:
+                    self.ui.handle_motion(event)
 
             #self.ui.keep_moving()
             self.screen.fill((0, ) * 3)

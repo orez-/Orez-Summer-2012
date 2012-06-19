@@ -3,13 +3,15 @@ import pygame
 from board import Player
 from level_save import LevelLoad
 from chatbox import Chatbox
+from ui import UI
 
 
-class GameUI:
+class GameUI(UI):
     PLAY_MODE = 1
     TYPE_MODE = 2
 
     def __init__(self, main, player2, level="division_of_labor"):
+        super(GameUI, self).__init__(main)
         self.level_name = level
         self.main = main
         loc, self.board = LevelLoad.load_level(level)

@@ -2,10 +2,11 @@ import pygame
 import random
 
 from constants import SCREEN_SIZE, get_noun, get_adjective
+from ui import UI
 
-class WaitUI:
+class WaitUI(UI):
     def __init__(self, main, player2):
-        self.main = main
+        super(WaitUI, self).__init__(main)
         self.player2 = player2
         self.surface = pygame.Surface((SCREEN_SIZE))
         self.smaller_font = pygame.font.Font(None, 28)
@@ -91,7 +92,5 @@ class WaitUI:
         screen.blit(self.surface, (0, 0))
 
     def handle_key(self, event):
-        pass
-
-    def handle_key_up(self, event):
-        pass
+        if event.key == pygame.K_ESCAPE:
+            self.main.change_screen("main")

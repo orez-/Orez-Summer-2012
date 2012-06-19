@@ -25,6 +25,13 @@ class Tile:
             (tile * Tile.BLOCKSIZE, 0, Tile.BLOCKSIZE,
             Tile.BLOCKSIZE))
 
+    @staticmethod
+    def get_tile(tile):
+        toR = pygame.Surface((Tile.BLOCKSIZE, ) * 2)
+        toR.blit(Tile.TILESET, (0, 0),
+            (tile * Tile.BLOCKSIZE, 0, Tile.BLOCKSIZE, Tile.BLOCKSIZE))
+        return toR
+
 
 class Player:
     us_pic = pygame.image.load("imgs/us.png")
@@ -78,6 +85,7 @@ class Player:
 
 class TileFeature(object):
     ID_TO_ITEM = None
+    ITEM_TO_ID = None
 
     def __init__(self, board):
         self.board = board
@@ -89,6 +97,9 @@ class TileFeature(object):
         pass
 
     def reblit(self, surf, x, y):
+        self.draw(surf, x * Tile.BLOCKSIZE, y * Tile.BLOCKSIZE)
+
+    def draw(self, surf, px, py):
         pass
 
     @staticmethod
@@ -99,7 +110,13 @@ class TileFeature(object):
             3:Beartrap,
             4:Walltrap,
             5:Timetrap}
-        ITEM_TO_ID = {v:k for k,v in TileFeature.ID_TO_ITEM.items()}
+        TileFeature.ITEM_TO_ID = {v:k for k,v in TileFeature.ID_TO_ITEM.items()}
+
+    @staticmethod
+    def get_items():
+        if TileFeature.ITEM_TO_ID is None:
+            TileFeature.build_ids()
+        return TileFeature.ITEM_TO_ID
 
     @staticmethod
     def id_to_item(idd):
@@ -128,30 +145,27 @@ class Snorkel(TileFeature):
                     break
             stepper.snorkel = True
 
-    def reblit(self, surf, x, y):
-        surf.blit(self.img, (x * Tile.BLOCKSIZE, y * Tile.BLOCKSIZE),
-            (0, 0, Tile.BLOCKSIZE, Tile.BLOCKSIZE))
+    def draw(self, surf, x, y):
+        surf.blit(self.img, (x, y), (0, 0, Tile.BLOCKSIZE, Tile.BLOCKSIZE))
 
 class Button(TileFeature):
-    def __init__(self, board, activates):
-        self.board = board
+    def __init__(self, board, activates=None):
+        super(Button, self).__init__(board)
         self.activates = activates
 
     def step(self, stepper=None):
-        #print "Stepped on a button"
         self.activates.activate()
 
     def unstep(self):
-        #print "Got off the button"
         self.activates.deactivate()
 
-    def reblit(self, surf, x, y):
+    def draw(self, surf, x, y):
         pygame.draw.circle(surf, (128, 80, 0),
-            (int((x + .5) * Tile.BLOCKSIZE), int((y + .5) * Tile.BLOCKSIZE)), 5)
+            map(lambda q: q + Tile.BLOCKSIZE/2, (x, y)), 5)
 
 class Beartrap(TileFeature):
     def __init__(self, board):
-        self.board = board
+        super(Beartrap, self).__init__(board)
         self.active = True
 
     def activate(self):
@@ -162,16 +176,13 @@ class Beartrap(TileFeature):
         self.active = True
         self.board.redraw()
 
-    def reblit(self, surf, x, y):
+    def draw(self, surf, x, y):
         color = (128, 80, 0)
         if not self.active:
             color = (80, 128, 0)
-        pygame.draw.circle(surf, color, (int((x + .5) * Tile.BLOCKSIZE), int((y + .5) * Tile.BLOCKSIZE)), 20)
+        pygame.draw.circle(surf, color, map(lambda q: q + Tile.BLOCKSIZE/2, (x, y)), 20)
 
 class Walltrap(TileFeature):
-    def __init__(self, board):
-        self.board = board
-
     def step(self, stepper=None):
         for (y,x), w in self.board.stuff.items():
             if w is self:
@@ -180,39 +191,84 @@ class Walltrap(TileFeature):
                 break
         self.board.redraw()
 
-    def reblit(self, surf, x, y):
+    def draw(self, surf, x, y):
         color = (0x66, ) * 3
-        pygame.draw.circle(surf, color, (int((x + .5) * Tile.BLOCKSIZE), int((y + .5) * Tile.BLOCKSIZE)), 20)
+        pygame.draw.circle(surf, color, map(lambda q: q + Tile.BLOCKSIZE/2, (x, y)), 20)
 
 class Timetrap(TileFeature):
-    def __init__(self, board):
-        self.board = board
-
     def step(self, stepper=None):
         stepper.time_trapped = not stepper.time_trapped
 
-    def reblit(self, surf, x, y):
-        circ = (int((x + .5) * Tile.BLOCKSIZE), int((y + .5) * Tile.BLOCKSIZE))
+    def draw(self, surf, x, y):
+        circ = map(lambda q: q + Tile.BLOCKSIZE/2, (x, y))
         pygame.draw.circle(surf, (0xEF, 0xE4, 0xB0), circ, 20)
         pygame.draw.circle(surf, (0, ) * 3, circ, 20, 1)
         pygame.draw.line(surf, (0, ) * 3, circ, (circ[0] + 10, circ[1]))
         pygame.draw.line(surf, (0, ) * 3, circ, (circ[0], circ[1] - 15))
 
+class TileFeatureDict:
+    def __init__(self, stuff={}, (xoff, yoff)=(0, 0)):
+        if isinstance(stuff, TileFeatureDict):
+            self.stuff = stuff.stuff
+            self.xoff = stuff.xoff
+            self.yoff = stuff.yoff
+        else:
+            self.stuff = stuff
+            self.xoff = xoff
+            self.yoff = yoff
+
+    def normalize(self):
+        stuff = {}
+        for (y, x), v in self.stuff.items():
+            stuff[self.translate(y, x)] = v
+        self.stuff = stuff
+        self.xoff = 0
+        self.yoff = 0
+
+    def shift_offset(self, x, y):
+        self.xoff += x
+        self.yoff += y
+
+    def reblit(self, surf):
+        for (y, x), v in self.stuff.items():
+            v.reblit(surf, x + self.xoff, y + self.yoff)
+
+    def translate(self, (y, x)):
+        return (self.yoff + y, self.xoff + x)
+
+    def __setitem__(self, (y, x), value):
+        self.stuff[self.translate((y, x))] = value
+
+    def __getitem__(self, (y, x)):
+        return self.stuff[self.translate((y, x))]
+
+    def __delitem__(self, (y, x)):
+        del self.stuff[self.translate((y, x))]
+
+    def __contains__(self, (y, x)):
+        return self.translate((y, x)) in self.stuff
+
+    def items(self):
+        return [(self.translate((y, x)), v)
+                for (y, x), v in self.stuff.items()]
+
 class Board:
     def __init__(self, tiles=None):
         self.data = tiles
+        self.recreate_surface()
 
+    def add_stuff(self, stuff={}):
+        self.stuff = TileFeatureDict(stuff)
+        for (y, x), obj in self.stuff.items():
+            if isinstance(obj, Button) and self.data[y][x] == Tile.BLOCK:
+                obj.step()
+        self.redraw()
+
+    def recreate_surface(self):
         width = len(self.data[0])
         height = len(self.data)
 
         self.surface = pygame.Surface(map(lambda x: x * Tile.BLOCKSIZE, (width, height)))
-
-    def add_stuff(self, stuff):
-        self.stuff = stuff
-        for (y,x), obj in self.stuff.items():
-            if isinstance(obj, Button) and self.data[y][x] == Tile.BLOCK:
-                obj.step()
-        self.redraw()
 
     def move_player(self, who, (dx, dy)):
         x = self.can_move(who, (dx, dy))
@@ -296,8 +352,9 @@ class Board:
             for x, elem in enumerate(row):
                 Tile.draw_tile(elem, self.surface, (x, y))
 
-        for (y,x), v in self.stuff.items():
-            v.reblit(self.surface, x, y)
+        self.stuff.reblit(self.surface)
+        #for (y,x), v in self.stuff.items():
+        #    v.reblit(self.surface, x, y)
 
     def reblit(self, surface, center):
         surface.blit(self.surface, map(lambda x: (SCREEN_RADIUS - x) * Tile.BLOCKSIZE, center))

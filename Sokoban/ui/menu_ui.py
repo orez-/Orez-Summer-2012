@@ -1,17 +1,19 @@
 import pygame
 
 from constants import SCREEN_SIZE
+from ui import UI
 
 
-class MenuUI:
+class MenuUI(UI):
     def __init__(self, main, message=None):
-        self.main = main
+        super(MenuUI, self).__init__(main)
         self.surface = pygame.Surface(SCREEN_SIZE)
         self.title = pygame.font.Font(None, 72).render("Sokorez", True, (0, ) * 3)
         self.font = pygame.font.Font(None, 48)
 
         self.options = [("Join Game", lambda: self.main.change_screen("join")),
                         ("Host Game", lambda: self.main.change_screen("host")),
+                        ("Level Editor", lambda: self.main.change_screen("editor")),
                         ("Quit", self.main.stop)]
         self.selected = 0
         self.finger = pygame.image.load("imgs/finger.png")
