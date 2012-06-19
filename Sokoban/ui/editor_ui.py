@@ -13,7 +13,7 @@ TS_X = SCREEN_SIZE[0] - TS_WIDTH
 class EditorUI(UI):
     def __init__(self, main):
         super(EditorUI, self).__init__(main)
-        self.view = [5, 5]
+        self.view = [0, 0]
         self.board = Board([[Tile.WALL]])
         self.board.add_stuff()
         self.surface = pygame.Surface(SCREEN_SIZE)
@@ -61,6 +61,8 @@ class EditorUI(UI):
         else:
             if self.tile_select.selected is not None:
                 x, y = map(lambda q: q // Tile.BLOCKSIZE, self.tile_select.sel_loc)
+                x += self.view[0] - SCREEN_RADIUS
+                y += self.view[1] - SCREEN_RADIUS
                 if self.tile_select.selected[0] == 0:    # tiles
                     self.set_tile((x, y), self.tile_select.selected[1])
                 elif self.tile_select.selected[0] == 1:  # stuff
@@ -69,7 +71,7 @@ class EditorUI(UI):
                     self.set_feature((x, y), self.tile_select.selected[1])
                     self.tile_select.selected = None
                 elif self.tile_select.selected[0] == 2:  # player start
-                    self.start = PlayerStart(x, y)
+                    self.start = PlayerStart(x, y, self.view)
                     if (y, x) in self.board.stuff:
                         del self.board.stuff[(y, x)]
                         self.board.redraw()
@@ -81,8 +83,10 @@ class EditorUI(UI):
             for i, row in enumerate(self.board.data):
                 self.board.data[i] = [Tile.WALL for _ in xrange(-x)] + row
             self.board.stuff.shift_offset(x=x)  # all of our features are off
+            self.scroll(x=-x)
+            if self.start is not None:
+                self.start.x -= x
             x = 0
-            # TODO: scroll backwards appropriately: you've changed the coordinates
             resized = True
 
         if y < 0:  # need more rows
@@ -90,8 +94,10 @@ class EditorUI(UI):
             self.board.data = [[Tile.WALL for _ in xrange(wid)]
                           for _ in xrange(-y)] + self.board.data
             self.board.stuff.shift_offset(y=y)  # all of our features are off
+            self.scroll(y=-y)
+            if self.start is not None:
+                self.start.y -= y
             y = 0
-            # TODO: scroll backwards appropriately: you've changed the coordinates
             resized = True
 
         ydiff = y - len(self.board.data) + 1
@@ -108,28 +114,49 @@ class EditorUI(UI):
 
         if resized:
             self.board.recreate_surface()
+        return (x, y)
 
     def set_feature(self, (x, y), feature_class):
-        self.resize_board(x, y)
+        x, y = self.resize_board(x, y)
         self.board.stuff[(y, x)] = feature_class(self.board)
         self.board.redraw()
 
     def set_tile(self, (x, y), tile):
-        self.resize_board(x, y)
+        x, y = self.resize_board(x, y)
         self.board.data[y][x] = tile
         self.board.redraw()
 
+    def scroll(self, x=0, y=0):
+        self.view[0] += x
+        self.view[1] += y
+
+    def handle_key(self, event):
+        if event.key == pygame.K_UP:
+            self.scroll(y=-1)
+            #self.view[1] -= 1
+        if event.key == pygame.K_DOWN:
+            self.scroll(y=1)
+            #self.view[1] += 1
+        if event.key == pygame.K_RIGHT:
+            self.scroll(x=1)
+            #self.view[0] += 1
+        if event.key == pygame.K_LEFT:
+            self.scroll(x=-1)
+            #self.view[0] -= 1
+
 class PlayerStart(TileFeature):
     img = pygame.image.load("imgs/us.png")
-    def __init__(self, x, y):
+    def __init__(self, x, y, view):
         self.x = x
         self.y = y
+        self.view = view
 
     def reblit(self, surf):
         super(PlayerStart, self).reblit(surf, self.x, self.y)
 
     def draw(self, surf, x, y):
-        surf.blit(PlayerStart.img, (x, y))
+        surf.blit(PlayerStart.img, map(lambda (q1, q2):
+            (q1 - (q2 - SCREEN_RADIUS) * Tile.BLOCKSIZE), zip((x, y), self.view)))
 
 class TileSelect:
     def __init__(self):

@@ -225,9 +225,9 @@ class TileFeatureDict:
         self.xoff = 0
         self.yoff = 0
 
-    def shift_offset(self, x, y):
-        self.xoff += x
-        self.yoff += y
+    def shift_offset(self, x=0, y=0):
+        self.xoff -= x
+        self.yoff -= y
 
     def reblit(self, surf):
         for (y, x), v in self.stuff.items():
@@ -236,8 +236,11 @@ class TileFeatureDict:
     def translate(self, (y, x)):
         return (self.yoff + y, self.xoff + x)
 
+    def detranslate(self, (y, x)):
+        return (y - self.yoff, x - self.xoff)
+
     def __setitem__(self, (y, x), value):
-        self.stuff[self.translate((y, x))] = value
+        self.stuff[self.detranslate((y, x))] = value
 
     def __getitem__(self, (y, x)):
         return self.stuff[self.translate((y, x))]
