@@ -4,6 +4,7 @@ from ui.menu_ui import MenuUI
 from ui.game_ui import GameUI
 from ui.wait_ui import WaitUI
 from ui.editor_ui import EditorUI
+from ui.save_ui import SaveUI
 from constants import SCREEN_SIZE
 from networking import Server, Client
 
@@ -34,7 +35,7 @@ class Main:
     def restart(self):
         self.ui = self.ui.reload_level()
 
-    def change_screen(self, which):
+    def change_screen(self, which, **kwargs):
         if which == "editor":
             self.ui = EditorUI(self)
         if which == "game":
@@ -52,6 +53,8 @@ class Main:
         if which == "main":
             self.stop_multiplayer()
             self.ui = MenuUI(self)
+        if which == "save":
+            self.ui = SaveUI(self, kwargs["board"], kwargs["start"])
 
     def send_msg(self, msg):
         self.client.send(msg)

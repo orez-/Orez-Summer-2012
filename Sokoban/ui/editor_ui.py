@@ -18,16 +18,10 @@ class EditorUI(UI):
         self.board.add_stuff()
         self.surface = pygame.Surface(SCREEN_SIZE)
 
-        self.bg = pygame.Surface(SCREEN_SIZE)
-        for x in xrange(SCREEN_RADIUS * 2 + 1):
-            for y in xrange(SCREEN_RADIUS * 2 + 1):
-                Tile.draw_tile(Tile.WALL, self.bg, (x, y))
-
         self.tile_select = TileSelect()
         self.start = None
 
     def reblit(self, surf):
-        surf.blit(self.bg, (0, 0))
         self.board.reblit(surf, self.view)
         if self.start is not None:
             self.start.reblit(surf)
@@ -133,16 +127,20 @@ class EditorUI(UI):
     def handle_key(self, event):
         if event.key == pygame.K_UP:
             self.scroll(y=-1)
-            #self.view[1] -= 1
         if event.key == pygame.K_DOWN:
             self.scroll(y=1)
-            #self.view[1] += 1
         if event.key == pygame.K_RIGHT:
             self.scroll(x=1)
-            #self.view[0] += 1
         if event.key == pygame.K_LEFT:
             self.scroll(x=-1)
-            #self.view[0] -= 1
+        if (event.key == pygame.K_s and
+                pygame.key.get_mods() | pygame.KMOD_CTRL):
+            if self.start is not None:
+                self.main.change_screen("save", board=self.board,
+                    start=self.start)
+            else:  # let them know they need a start zone.
+                pass
+
 
 class PlayerStart(TileFeature):
     img = pygame.image.load("imgs/us.png")

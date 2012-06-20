@@ -113,6 +113,10 @@ class TileFeature(object):
         TileFeature.ITEM_TO_ID = {v:k for k,v in TileFeature.ID_TO_ITEM.items()}
 
     @staticmethod
+    def object_to_id(obj):
+        return TileFeature.item_to_id(obj.__class__)
+
+    @staticmethod
     def get_items():
         if TileFeature.ITEM_TO_ID is None:
             TileFeature.build_ids()
@@ -220,7 +224,7 @@ class TileFeatureDict:
     def normalize(self):
         stuff = {}
         for (y, x), v in self.stuff.items():
-            stuff[self.translate(y, x)] = v
+            stuff[self.translate((y, x))] = v
         self.stuff = stuff
         self.xoff = 0
         self.yoff = 0
@@ -251,6 +255,9 @@ class TileFeatureDict:
     def __contains__(self, (y, x)):
         return self.translate((y, x)) in self.stuff
 
+    def __len__(self):
+        return len(self.stuff)
+
     def items(self):
         return [(self.translate((y, x)), v)
                 for (y, x), v in self.stuff.items()]
@@ -258,6 +265,12 @@ class TileFeatureDict:
 class Board:
     def __init__(self, tiles=None):
         self.data = tiles
+
+        self.bg = pygame.Surface(SCREEN_SIZE)
+        for x in xrange(SCREEN_RADIUS * 2 + 1):
+            for y in xrange(SCREEN_RADIUS * 2 + 1):
+                Tile.draw_tile(Tile.WALL, self.bg, (x, y))
+
         self.recreate_surface()
 
     def add_stuff(self, stuff={}):
@@ -272,6 +285,74 @@ class Board:
         height = len(self.data)
 
         self.surface = pygame.Surface(map(lambda x: x * Tile.BLOCKSIZE, (width, height)))
+
+    def normalize(self):
+        #print "\nMap was", self.data
+        x_max, y_max, x_min, y_min = [None] * 4
+        if self.stuff:
+            xs, ys = zip(*[(x, y) for (y, x), _ in self.stuff.items()])
+            x_max = max(xs)
+            y_max = max(ys)
+            x_min = min(xs)
+            y_min = min(ys)
+
+        # UP
+        for i, row in enumerate(self.data):
+            if list(row) != [Tile.WALL] * len(row):
+                break
+        ycut = i
+        if y_min is not None:
+            ycut = min(y_min, i)
+        self.data = self.data[ycut:]
+        self.stuff.shift_offset(y=ycut-1)  # The -1 is for wall_wrap
+
+        #print "After the UPSHIFT:", self.data
+
+        # LEFT
+        for i, col in enumerate(zip(*self.data)):
+            if list(col) != [Tile.WALL] * len(col):
+                break
+        xcut = i
+        if x_min is not None:
+            xcut = min(x_min, i)
+        self.data = zip(*zip(*self.data)[xcut:])
+        self.stuff.shift_offset(x=xcut-1)
+
+        #print "After the LEFTSHIFT:", self.data
+
+        # DOWN
+        for i, row in reversed(list(enumerate(self.data))):
+            if list(row) != [Tile.WALL] * len(row):
+                break
+        cut = i + 1
+        if y_max is not None:
+            cut = max(y_max, i) + 1
+        self.data = self.data[:cut]
+        #self.stuff.shift_offset(y=len(self.data) - cut)
+
+        #print "After the DOWNSHIFT:", self.data
+
+        # RIGHT
+        for i, col in reversed(list(enumerate(zip(*self.data)))):
+            if list(col) != [Tile.WALL] * len(col):
+                break
+        cut = i + 1
+        if x_max is not None:
+            cut = max(x_max, i) + 1
+        self.data = zip(*zip(*self.data)[:cut])
+        #self.stuff.shift_offset(x=len(self.data) - cut)
+
+        #print "After the RIGHTSHIFT:", self.data
+
+        self.wall_wrap()
+        self.stuff.normalize()
+        return xcut - 1, ycut - 1
+
+    def wall_wrap(self):
+        walls = [Tile.WALL] * len(self.data)
+        rdata = [walls] + zip(*self.data) + [walls]
+        walls = [Tile.WALL] * len(rdata)
+        self.data = [walls] + zip(*rdata) + [walls]
 
     def move_player(self, who, (dx, dy)):
         x = self.can_move(who, (dx, dy))
@@ -360,4 +441,5 @@ class Board:
         #    v.reblit(self.surface, x, y)
 
     def reblit(self, surface, center):
+        surface.blit(self.bg, (0, 0))
         surface.blit(self.surface, map(lambda x: (SCREEN_RADIUS - x) * Tile.BLOCKSIZE, center))

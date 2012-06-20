@@ -3,6 +3,22 @@ import os
 
 from board import Board, TileFeature
 
+class LevelSave(object):
+    @staticmethod
+    def save(filename, board, start):
+        full_filename = LevelLoad.full_path(filename)
+        if os.path.isfile(full_filename):
+            return False
+        with open(full_filename, "w") as f:
+            stri = '\n'.join([''.join([hex(elem)[2:] for elem in row])
+                for row in board.data])
+            stri += "\n^" + str(start.x) + "," + str(start.y) + "\n"
+            for (y, x), v in board.stuff.items():
+                stri += ','.join(map(str,
+                    (y, x, TileFeature.object_to_id(v)))) + "\n"
+            f.write(stri)
+        return True
+
 class LevelLoad(object):
     @staticmethod
     def load(filename):
@@ -53,8 +69,8 @@ class LevelLoad(object):
                     return LevelLoad.load(full_filename)
                 # making it here means the file exists but the hash is wrong.
                 # we still want to download the new data into this file, but
-                # we don't want to lose the old data. So store it in the next
-                # filename (#)
+                # we don't want to lose the old data. So we store the old in
+                # the next filename (#)
                 i = 0
                 new_filename = full_filename
                 while os.path.isfile(new_filename):

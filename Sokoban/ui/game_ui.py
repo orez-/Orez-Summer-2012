@@ -15,7 +15,7 @@ class GameUI(UI):
         self.level_name = level
         self.main = main
         loc, self.board = LevelLoad.load_level(level)
-        #self.board = Board()
+
         self.player1 = Player(self.board, loc)
         self.player2 = Player(self.board, loc, self.player1)
         self.which_player = player2
