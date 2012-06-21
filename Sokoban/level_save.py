@@ -3,6 +3,7 @@ import os
 
 from board import Board, TileFeature
 
+
 class LevelSave(object):
     @staticmethod
     def save(filename, board, start):

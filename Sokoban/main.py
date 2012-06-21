@@ -28,6 +28,8 @@ class Main:
         self.server = None
         self.client = None
 
+        self.clicked = 0
+
     def start_server(self):
         self.server = Server()
         self.server.start()
@@ -85,9 +87,16 @@ class Main:
                 elif event.type == pygame.KEYUP:
                     self.ui.handle_key_up(event)
                 elif event.type == pygame.MOUSEBUTTONDOWN:
+                    self.clicked = True
                     self.ui.handle_click(event)
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    self.clicked = False
+                    self.ui.handle_click_up(event)
                 elif event.type == pygame.MOUSEMOTION:
-                    self.ui.handle_motion(event)
+                    if self.clicked:
+                        self.ui.handle_drag(event)
+                    else:
+                        self.ui.handle_motion(event)
 
             #self.ui.keep_moving()
             self.screen.fill((0, ) * 3)

@@ -9,6 +9,8 @@ TS_ACROSS = 3
 TS_WIDTH = TS_SPACER * (TS_ACROSS + 1) + Tile.BLOCKSIZE * TS_ACROSS
 TS_X = SCREEN_SIZE[0] - TS_WIDTH
 
+RECT_CURVE = min(Tile.BLOCKSIZE / 2, 15)
+HILITE_COLOR = (0xFF, 0xFF, 0x00, 0x40)
 
 class EditorUI(UI):
     def __init__(self, main):
@@ -17,15 +19,60 @@ class EditorUI(UI):
         self.board = Board([[Tile.WALL]])
         self.board.add_stuff()
         self.surface = pygame.Surface(SCREEN_SIZE)
+        self.highlight_surface = pygame.Surface(SCREEN_SIZE, pygame.SRCALPHA)
 
         self.tile_select = TileSelect()
         self.start = None
+
+        self.select_rect = None
+        self.move_rect = None
+        self.move_surf = None
+        self.move_data = None
+
+        self._juggler = pygame.Surface(SCREEN_SIZE)
 
     def reblit(self, surf):
         self.board.reblit(surf, self.view)
         if self.start is not None:
             self.start.reblit(surf)
+
+        self.redraw_highlight()
+        surf.blit(self.highlight_surface, (0, 0))
+
+        if self.move_rect is not None:
+            surf.blit(self.move_surf, self.move_rect[0])
+
         self.tile_select.reblit(surf)
+
+    def redraw_highlight(self):
+        self.highlight_surface.fill((0, ) * 4)
+        if self.select_rect is not None:
+            (x_min, y_min), (x_max, y_max) = self.fix_rect(self.select_rect)
+
+            self.draw_curved_highlight((x_min, y_min), (x_max, y_max))
+
+            #self.highlight_surface.fill(HILITE_COLOR,
+            #    map(lambda q: map(lambda r: r * Tile.BLOCKSIZE, q),
+            #    ((x_min, y_min), (x_max, y_max))))
+
+    def draw_curved_highlight(self, (x_min, y_min), (x_max, y_max)):
+        px_min, py_min = map(lambda q: q * Tile.BLOCKSIZE + RECT_CURVE, (x_min, y_min))
+        px_max, py_max = map(lambda q: (q + 1) * Tile.BLOCKSIZE - RECT_CURVE, (x_max, y_max))
+
+        for x, y in ((px_min, py_min), (px_max, py_min),
+                (px_min, py_max), (px_max, py_max)):
+            pygame.draw.circle(self.highlight_surface, HILITE_COLOR,
+                (x, y), RECT_CURVE)
+
+        x_max -= x_min - 1
+        y_max -= y_min - 1
+
+        self.highlight_surface.fill(HILITE_COLOR,
+            ((x_min * Tile.BLOCKSIZE + RECT_CURVE, y_min * Tile.BLOCKSIZE),
+             (x_max * Tile.BLOCKSIZE - RECT_CURVE * 2, y_max * Tile.BLOCKSIZE)))
+        self.highlight_surface.fill(HILITE_COLOR,
+            ((x_min * Tile.BLOCKSIZE, y_min * Tile.BLOCKSIZE + RECT_CURVE),
+             (x_max * Tile.BLOCKSIZE, y_max * Tile.BLOCKSIZE - RECT_CURVE * 2)))
 
     @staticmethod
     def grid_coords(x, y):
@@ -40,9 +87,11 @@ class EditorUI(UI):
 
     def handle_click(self, event):
         ex, ey = event.pos
-        if ex > TS_X:
+        if ex > TS_X:   # stuff-bar
             click_x = ex - TS_SPACER - TS_X
             select = 0
+            self.select_rect = None
+            self.redraw_highlight()
             if click_x % (Tile.BLOCKSIZE + TS_SPACER) < Tile.BLOCKSIZE:
                 select += click_x // (Tile.BLOCKSIZE + TS_SPACER)
                 if ey % (Tile.BLOCKSIZE + TS_SPACER) > TS_SPACER:
@@ -52,24 +101,112 @@ class EditorUI(UI):
                         print self.tile_select.selected, select
                         return
             self.tile_select.selected = None
+        else:   # map proper
+            if self.select_rect is not None:
+                ax, ay = self.get_click_abs_coord((ex, ey))
+                (x1, y1), (x2, y2) = self.fix_rect(self.select_rect)
+                if x1 <= ax <= x2 and y1 <= ay <= y2:
+                    bx, by = self.get_click_board_coord((x1, y1), True)
+                    w, h = (x2 - x1 + 1, y2 - y1 + 1)
+                    px, py = map(lambda q: q * Tile.BLOCKSIZE, (x1, y1))
+                    pw, ph = map(lambda q: q * Tile.BLOCKSIZE, (w, h))
+                    self.move_surf = pygame.Surface((pw, ph))
+                    self.reblit(self._juggler)
+                    self.move_surf.blit(self._juggler, (0, 0), ((px, py), (pw, ph)))
+                    self.move_rect = [[ax * Tile.BLOCKSIZE, ay * Tile.BLOCKSIZE]]
+                    self.select_rect = None
+                    self.move_data = []
+                    self.move_data = [[self.get_tile((x, y)) for x in xrange(bx, bx + w)]
+                            for y in xrange(by, by + h)]
+
+                    if True:  # IF YOU WANT TO DELETE THE OLD TILES
+                        self.resize_board(bx, by)
+                        bx = max(bx, 0)
+                        by = max(by, 0)
+                        for y in xrange(by, by + h):
+                            for x in xrange(bx, bx + w):
+                                self.set_tile((x, y), Tile.WALL)
+                    print "clack"
+                    return
+                else:
+                    self.select_rect = [[ax, ay], [ax, ay]]
+            self.set_something(ex, ey)  # hey
+
+    def get_click_abs_coord(self, (ex, ey)):
+        return map(lambda q: q // Tile.BLOCKSIZE, (ex, ey))
+
+    def get_click_board_coord(self, (ex, ey), skip=False):  # pixels -> coords
+        x, y = ex, ey
+        if not skip:
+            x, y = self.get_click_abs_coord((ex, ey))
+        return map(sum, zip((x - SCREEN_RADIUS, y - SCREEN_RADIUS), self.view))
+
+    @staticmethod
+    def fix_rect(rect):
+        transpose = zip(*rect)
+        x_min, y_min = map(min, transpose)
+        x_max, y_max = map(max, transpose)
+        return [[x_min, y_min], [x_max, y_max]]
+
+    def set_something(self, ex, ey):
+        if self.tile_select.sel_loc is None:
+            return
+        x, y = self.get_click_board_coord(self.tile_select.sel_loc)
+        if self.tile_select.selected is not None:
+            if self.tile_select.selected[0] == 0:    # tiles
+                self.set_tile((x, y), self.tile_select.selected[1])
+            elif self.tile_select.selected[0] == 1:  # stuff
+                if self.start is not None and (self.start.x, self.start.y) == (x, y):
+                    self.start = None
+                self.set_feature((x, y), self.tile_select.selected[1])
+                self.tile_select.selected = None
+            elif self.tile_select.selected[0] == 2:  # player start
+                self.start = PlayerStart(x, y, self.view)
+                if (y, x) in self.board.stuff:
+                    del self.board.stuff[(y, x)]
+                    self.board.redraw()
+                self.tile_select.selected = None
+        #else:
+        #    if self.select_rect is None:
+        #        self.select_rect = [[x, y]]
+
+    def handle_click_up(self, event):
+        if self.move_rect is not None:  # put it down!
+            x, y = self.get_click_abs_coord(self.tile_select.sel_loc)
+            bx, by = self.get_click_board_coord(self.tile_select.sel_loc)
+            self.resize_board(bx, by)
+            print bx, by
+            for r, row in enumerate(self.move_data):
+                for c, elem in enumerate(row):
+                    self.set_tile((c + max(bx, 0), r + max(by, 0)), elem)
+            self.move_rect = None
+            self.move_data = None
+            self.move_surf = None
+
+    def handle_drag(self, event):
+        self.handle_motion(event)
+
+        if self.tile_select.sel_loc is None:
+            return False
+        x, y = self.get_click_abs_coord(self.tile_select.sel_loc)
+        if self.tile_select.selected is None and self.select_rect is None:
+            self.select_rect = [[x, y], [x, y]]  # not placing and no rect
         else:
-            if self.tile_select.selected is not None:
-                x, y = map(lambda q: q // Tile.BLOCKSIZE, self.tile_select.sel_loc)
-                x += self.view[0] - SCREEN_RADIUS
-                y += self.view[1] - SCREEN_RADIUS
-                if self.tile_select.selected[0] == 0:    # tiles
-                    self.set_tile((x, y), self.tile_select.selected[1])
-                elif self.tile_select.selected[0] == 1:  # stuff
-                    if self.start is not None and (self.start.x, self.start.y) == (x, y):
-                        self.start = None
-                    self.set_feature((x, y), self.tile_select.selected[1])
-                    self.tile_select.selected = None
-                elif self.tile_select.selected[0] == 2:  # player start
-                    self.start = PlayerStart(x, y, self.view)
-                    if (y, x) in self.board.stuff:
-                        del self.board.stuff[(y, x)]
-                        self.board.redraw()
-                    self.tile_select.selected = None
+            if self.move_rect is not None:
+                self.move_rect[0] = [x * Tile.BLOCKSIZE, y * Tile.BLOCKSIZE]
+                return
+            if self.select_rect is not None:  # uh
+                self.select_rect[1] = [x, y]
+                return
+            x, y = self.get_click_board_coord(self.tile_select.sel_loc)
+            try:
+                if (y >= 0 and x >= 0 and
+                        self.board.data[y][x] == self.tile_select.selected[1]):
+                    return False
+            except IndexError:
+                pass
+            self.set_something(*event.pos)
+        return True
 
     def resize_board(self, x, y):
         resized = False
@@ -120,9 +257,20 @@ class EditorUI(UI):
         self.board.data[y][x] = tile
         self.board.redraw()
 
+    def get_tile(self, (x, y)):
+        if x < 0 or y < 0:
+            return Tile.WALL
+        try:
+            return self.board.data[y][x]
+        except IndexError:
+            return Tile.WALL
+
     def scroll(self, x=0, y=0):
         self.view[0] += x
         self.view[1] += y
+        if self.select_rect is not None:
+            self.select_rect[0] = map(sum, zip(self.select_rect[0], (-x, -y)))
+            self.redraw_highlight()
 
     def handle_key(self, event):
         if event.key == pygame.K_UP:
@@ -155,6 +303,7 @@ class PlayerStart(TileFeature):
     def draw(self, surf, x, y):
         surf.blit(PlayerStart.img, map(lambda (q1, q2):
             (q1 - (q2 - SCREEN_RADIUS) * Tile.BLOCKSIZE), zip((x, y), self.view)))
+
 
 class TileSelect:
     def __init__(self):

@@ -11,6 +11,12 @@ class UI(object):
     def handle_click(self, event):
         pass
 
+    def handle_click_up(self, event):
+        pass
+
+    def handle_drag(self, event):
+        self.handle_motion(event)
+
     def handle_motion(self, event):
         pass
 
