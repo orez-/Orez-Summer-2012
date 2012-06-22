@@ -12,10 +12,10 @@ TEXT_BOX_Y = BIG_FONT.get_linesize() + TOP_TEXT_Y
 
 
 class SaveUI(UI):
-    def __init__(self, main, board, start):
-        super(SaveUI, self).__init__(main)
-        self.board = board
-        self.start = start
+    def __init__(self, main, parent):
+        super(SaveUI, self).__init__(main, parent)
+        self.board = parent.board
+        self.start = parent.start
 
         self.surface = pygame.Surface(SCREEN_SIZE)
         self.surface.fill((0xFF, ) * 3)
@@ -37,6 +37,8 @@ class SaveUI(UI):
         surf.blit(self.surface, (0, 0))
 
     def handle_key(self, event):
+        if event.key == pygame.K_ESCAPE:
+            self.main.ui_back()
         if event.key == pygame.K_BACKSPACE:
             self.text = self.text[:-1]
             self.redraw()

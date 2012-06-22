@@ -12,9 +12,10 @@ TS_X = SCREEN_SIZE[0] - TS_WIDTH
 RECT_CURVE = min(Tile.BLOCKSIZE / 2, 15)
 HILITE_COLOR = (0xFF, 0xFF, 0x00, 0x40)
 
+
 class EditorUI(UI):
-    def __init__(self, main):
-        super(EditorUI, self).__init__(main)
+    def __init__(self, main, parent):
+        super(EditorUI, self).__init__(main, parent)
         self.view = [0, 0]
         self.board = Board([[Tile.WALL]])
         self.board.add_stuff()
@@ -25,13 +26,9 @@ class EditorUI(UI):
         self.start = None
 
         self.select_rect = None
-        self.move_rect = None
-        self.move_surf = None
-        self.move_data = None
+        self.move_select = MoveChunk()
 
-        self._juggler = pygame.Surface(SCREEN_SIZE)
-
-    def reblit(self, surf):
+    def reblit(self, surf, hide_side=False):
         self.board.reblit(surf, self.view)
         if self.start is not None:
             self.start.reblit(surf)
@@ -39,10 +36,10 @@ class EditorUI(UI):
         self.redraw_highlight()
         surf.blit(self.highlight_surface, (0, 0))
 
-        if self.move_rect is not None:
-            surf.blit(self.move_surf, self.move_rect[0])
+        self.move_select.reblit(surf)
 
-        self.tile_select.reblit(surf)
+        if not hide_side:
+            self.tile_select.reblit(surf)
 
     def redraw_highlight(self):
         self.highlight_surface.fill((0, ) * 4)
@@ -106,27 +103,7 @@ class EditorUI(UI):
                 ax, ay = self.get_click_abs_coord((ex, ey))
                 (x1, y1), (x2, y2) = self.fix_rect(self.select_rect)
                 if x1 <= ax <= x2 and y1 <= ay <= y2:
-                    bx, by = self.get_click_board_coord((x1, y1), True)
-                    w, h = (x2 - x1 + 1, y2 - y1 + 1)
-                    px, py = map(lambda q: q * Tile.BLOCKSIZE, (x1, y1))
-                    pw, ph = map(lambda q: q * Tile.BLOCKSIZE, (w, h))
-                    self.move_surf = pygame.Surface((pw, ph))
-                    self.reblit(self._juggler)
-                    self.move_surf.blit(self._juggler, (0, 0), ((px, py), (pw, ph)))
-                    self.move_rect = [[ax * Tile.BLOCKSIZE, ay * Tile.BLOCKSIZE]]
-                    self.select_rect = None
-                    self.move_data = []
-                    self.move_data = [[self.get_tile((x, y)) for x in xrange(bx, bx + w)]
-                            for y in xrange(by, by + h)]
-
-                    if True:  # IF YOU WANT TO DELETE THE OLD TILES
-                        self.resize_board(bx, by)
-                        bx = max(bx, 0)
-                        by = max(by, 0)
-                        for y in xrange(by, by + h):
-                            for x in xrange(bx, bx + w):
-                                self.set_tile((x, y), Tile.WALL)
-                    print "clack"
+                    self.move_select.set_chunk(((x1, y1), (x2, y2)), (ax, ay), self)
                     return
                 else:
                     self.select_rect = [[ax, ay], [ax, ay]]
@@ -161,27 +138,16 @@ class EditorUI(UI):
                 self.set_feature((x, y), self.tile_select.selected[1])
                 self.tile_select.selected = None
             elif self.tile_select.selected[0] == 2:  # player start
-                self.start = PlayerStart(x, y, self.view)
-                if (y, x) in self.board.stuff:
-                    del self.board.stuff[(y, x)]
-                    self.board.redraw()
+                print x, y
+                self.set_start((x, y))
                 self.tile_select.selected = None
         #else:
         #    if self.select_rect is None:
         #        self.select_rect = [[x, y]]
 
     def handle_click_up(self, event):
-        if self.move_rect is not None:  # put it down!
-            x, y = self.get_click_abs_coord(self.tile_select.sel_loc)
-            bx, by = self.get_click_board_coord(self.tile_select.sel_loc)
-            self.resize_board(bx, by)
-            print bx, by
-            for r, row in enumerate(self.move_data):
-                for c, elem in enumerate(row):
-                    self.set_tile((c + max(bx, 0), r + max(by, 0)), elem)
-            self.move_rect = None
-            self.move_data = None
-            self.move_surf = None
+        if self.move_select.active():  # put it down!
+            self.move_select.release(self)
 
     def handle_drag(self, event):
         self.handle_motion(event)
@@ -189,11 +155,12 @@ class EditorUI(UI):
         if self.tile_select.sel_loc is None:
             return False
         x, y = self.get_click_abs_coord(self.tile_select.sel_loc)
-        if self.tile_select.selected is None and self.select_rect is None:
+        if (self.tile_select.selected is None and self.select_rect is None and
+                not self.move_select.active()):
             self.select_rect = [[x, y], [x, y]]  # not placing and no rect
         else:
-            if self.move_rect is not None:
-                self.move_rect[0] = [x * Tile.BLOCKSIZE, y * Tile.BLOCKSIZE]
+            if self.move_select.active():
+                self.move_select.move_to((x, y))
                 return
             if self.select_rect is not None:  # uh
                 self.select_rect[1] = [x, y]
@@ -248,14 +215,23 @@ class EditorUI(UI):
         return (x, y)
 
     def set_feature(self, (x, y), feature_class):
+        feature = feature_class
+        if feature_class.__class__ == type:
+            feature = feature_class(self.board)
         x, y = self.resize_board(x, y)
-        self.board.stuff[(y, x)] = feature_class(self.board)
+        self.board.stuff[(y, x)] = feature
         self.board.redraw()
 
     def set_tile(self, (x, y), tile):
         x, y = self.resize_board(x, y)
         self.board.data[y][x] = tile
         self.board.redraw()
+
+    def set_start(self, (x, y)):
+        self.start = PlayerStart(x, y, self.view)
+        if (y, x) in self.board.stuff:
+            del self.board.stuff[(y, x)]
+            self.board.redraw()
 
     def get_tile(self, (x, y)):
         if x < 0 or y < 0:
@@ -273,14 +249,22 @@ class EditorUI(UI):
             self.redraw_highlight()
 
     def handle_key(self, event):
-        if event.key == pygame.K_UP:
-            self.scroll(y=-1)
-        if event.key == pygame.K_DOWN:
-            self.scroll(y=1)
-        if event.key == pygame.K_RIGHT:
-            self.scroll(x=1)
-        if event.key == pygame.K_LEFT:
-            self.scroll(x=-1)
+        if event.key in (pygame.K_UP, pygame.K_DOWN, pygame.K_RIGHT, pygame.K_LEFT):
+            if event.key == pygame.K_UP:
+                self.scroll(y=-1)
+            if event.key == pygame.K_DOWN:
+                self.scroll(y=1)
+            if event.key == pygame.K_RIGHT:
+                self.scroll(x=1)
+            if event.key == pygame.K_LEFT:
+                self.scroll(x=-1)
+            if self.main.clicked and self.tile_select.selected is not None:
+                self.set_tile(self.get_click_board_coord(self.tile_select.sel_loc),
+                    self.tile_select.selected[1])
+
+        if event.key == pygame.K_ESCAPE:
+            self.main.ui_back()
+
         if (event.key == pygame.K_s and
                 pygame.key.get_mods() | pygame.KMOD_CTRL):
             if self.start is not None:
@@ -295,7 +279,7 @@ class PlayerStart(TileFeature):
     def __init__(self, x, y, view):
         self.x = x
         self.y = y
-        self.view = view
+        self.view = view  # this is a reference. Do not overwrite!
 
     def reblit(self, surf):
         super(PlayerStart, self).reblit(surf, self.x, self.y)
@@ -346,3 +330,82 @@ class TileSelect:
             surf.blit(self.selected[2], self.sel_loc)
         surf.blit(self.back_surface, (TS_X, 0))
         surf.blit(self.tile_surface, (TS_X, 0))
+
+
+class MoveChunk:
+    """ The selected bit that we've selected and are moving around.
+    It's complex enough to warrant its own data structure :( """
+    def __init__(self):
+        self.move_rect = None
+        self.move_surf = None
+        self.move_data = None
+        self.move_stuff = None
+        self.move_start = None
+
+        self._juggler = pygame.Surface(SCREEN_SIZE)
+
+    def active(self):
+        return self.move_rect is not None
+
+    def reblit(self, surf):
+        if self.active():
+            surf.blit(self.move_surf, map(sum, zip(*self.move_rect)))
+
+    def set_chunk(self, ((x1, y1), (x2, y2)), (ax, ay), editor):
+        bx, by = editor.get_click_board_coord((x1, y1), True)
+        w, h = (x2 - x1 + 1, y2 - y1 + 1)
+        px, py = map(lambda q: q * Tile.BLOCKSIZE, (x1, y1))
+        pw, ph = map(lambda q: q * Tile.BLOCKSIZE, (w, h))
+        self.move_surf = pygame.Surface((pw, ph))
+        editor.reblit(self._juggler, True)
+        self.move_surf.blit(self._juggler, (0, 0), ((px, py), (pw, ph)))
+        self.move_rect = [[ax * Tile.BLOCKSIZE, ay * Tile.BLOCKSIZE],
+            map(lambda q: q * Tile.BLOCKSIZE, [x1 - ax, y1 - ay])]
+        editor.select_rect = None
+        self.move_data = [[editor.get_tile((x, y)) for x in xrange(bx, bx + w)]
+                for y in xrange(by, by + h)]
+
+        self.move_stuff = {}
+        for (y, x), v in editor.board.stuff.items():
+            fx, fy = x - bx, y - by
+            if 0 <= fx < w and 0 <= fy < h:  # in bounds
+                self.move_stuff[(fy, fx)] = v
+                del editor.board.stuff[(y, x)]
+
+        sx, sy = editor.start.x - bx, editor.start.y - by
+        if 0 < sx <= w and 0 < sy <= h:
+            self.move_start = (sx, sy)
+            editor.start = None
+
+        if True:  # IF YOU WANT TO DELETE THE OLD TILES
+            editor.resize_board(bx, by)
+            bx = max(bx, 0)
+            by = max(by, 0)
+            for y in xrange(by, by + h):
+                for x in xrange(bx, bx + w):
+                    editor.set_tile((x, y), Tile.WALL)
+
+    def move_to(self, (x, y)):
+        self.move_rect[0] = map(lambda q: q * Tile.BLOCKSIZE, (x, y))
+
+    def release(self, editor):
+        x, y = editor.get_click_abs_coord(editor.tile_select.sel_loc)  # uh oh
+        bx, by = editor.get_click_board_coord(editor.tile_select.sel_loc)
+        bx += self.move_rect[1][0] // Tile.BLOCKSIZE
+        by += self.move_rect[1][1] // Tile.BLOCKSIZE
+        editor.resize_board(bx, by)
+        bx, by = map(lambda q: max(0, q), (bx, by))
+        for r, row in enumerate(self.move_data):
+            for c, elem in enumerate(row):
+                editor.set_tile((c + bx, r + by), elem)
+
+        if self.move_start is not None:
+            editor.set_start((self.move_start[0] + bx, self.move_start[1] + by))
+            self.move_start = None
+
+        for (y, x), v in self.move_stuff.items():
+            editor.set_feature((x + bx, y + by), v)
+        self.move_rect = None
+        self.move_data = None
+        self.move_surf = None
+        self.move_stuff = None

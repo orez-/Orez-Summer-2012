@@ -247,13 +247,13 @@ class TileFeatureDict:
         self.stuff[self.detranslate((y, x))] = value
 
     def __getitem__(self, (y, x)):
-        return self.stuff[self.translate((y, x))]
+        return self.stuff[self.translate((y, x))]   # aren't you wrong too?
 
     def __delitem__(self, (y, x)):
-        del self.stuff[self.translate((y, x))]
+        del self.stuff[self.detranslate((y, x))]
 
     def __contains__(self, (y, x)):
-        return self.translate((y, x)) in self.stuff
+        return self.detranslate((y, x)) in self.stuff
 
     def __len__(self):
         return len(self.stuff)

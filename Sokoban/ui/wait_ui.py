@@ -5,8 +5,8 @@ from constants import SCREEN_SIZE, get_noun, get_adjective
 from ui import UI
 
 class WaitUI(UI):
-    def __init__(self, main, player2):
-        super(WaitUI, self).__init__(main)
+    def __init__(self, main, parent, player2):
+        super(WaitUI, self).__init__(main, parent)
         self.player2 = player2
         self.surface = pygame.Surface((SCREEN_SIZE))
         self.smaller_font = pygame.font.Font(None, 28)
@@ -93,4 +93,4 @@ class WaitUI(UI):
 
     def handle_key(self, event):
         if event.key == pygame.K_ESCAPE:
-            self.main.change_screen("main")
+            self.main.ui_back()

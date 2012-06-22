@@ -1,6 +1,7 @@
 class UI(object):
-    def __init__(self, main):
+    def __init__(self, main, parent):
         self.main = main
+        self.parent = parent
 
     def handle_key(self, event):
         pass
@@ -22,3 +23,12 @@ class UI(object):
 
     def reblit(self, surf):
         pass
+
+    def on_reentry(self):
+        pass
+
+    def print_ui_stack(self):
+        x = self
+        while x:
+            print x.__class__
+            x = x.parent

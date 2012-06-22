@@ -24,7 +24,7 @@ class Main:
 
         self.screen = pygame.display.set_mode(self.size)
 
-        self.ui = MenuUI(self)
+        self.ui = MenuUI(self, None)
         self.server = None
         self.client = None
 
@@ -37,26 +37,36 @@ class Main:
     def restart(self):
         self.ui = self.ui.reload_level()
 
+    def ui_back(self):
+        """ Set the current ui-view to its parent, discarding the current """
+        if self.ui.parent is not None:
+            self.ui = self.ui.parent
+            self.ui.on_reentry()
+
+    def push_ui(self, cls, *args, **kwargs):
+        """ Push the new UI onto the old one. """
+        self.ui = cls(self, self.ui, *args, **kwargs)
+
     def change_screen(self, which, **kwargs):
         if which == "editor":
-            self.ui = EditorUI(self)
-        if which == "game":
-            self.ui = GameUI(self, self.ui.player2)  # oh dis is bad.
-        if which == "host":
+            self.push_ui(EditorUI)
+        elif which == "game":
+            self.push_ui(GameUI)
+            #self.ui = GameUI(self, self.ui.player2)  # oh dis is bad.
+        elif which == "host":
             self.start_server()
-            self.ui = WaitUI(self, False)
+            self.push_ui(WaitUI, False)
             self.join_server()
-        if which == "join":
-            self.ui = WaitUI(self, True)
+        elif which == "join":
+            self.push_ui(WaitUI, True)
             self.join_server()
-        if which == "no connect":
-            self.ui = MenuUI(self, "Couldn't connect")
-            self.client = None
-        if which == "main":
-            self.stop_multiplayer()
-            self.ui = MenuUI(self)
-        if which == "save":
-            self.ui = SaveUI(self, kwargs["board"], kwargs["start"])
+        elif which == "no connect":
+            self.ui_back()
+            self.ui.set_message("Couldn't connect")
+        elif which == "save":
+            self.push_ui(SaveUI)
+        else:
+            raise ValueError("I don't know the class "+str(which))
 
     def send_msg(self, msg):
         self.client.send(msg)
@@ -68,8 +78,10 @@ class Main:
     def stop_multiplayer(self):
         if self.server is not None:
             self.server.stop()
+            self.server = None
         if self.client is not None:
             self.client.stop()
+            self.client = None
 
     def stop(self):
         self.done = True

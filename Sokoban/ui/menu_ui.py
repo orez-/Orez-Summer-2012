@@ -5,8 +5,8 @@ from ui import UI
 
 
 class MenuUI(UI):
-    def __init__(self, main, message=None):
-        super(MenuUI, self).__init__(main)
+    def __init__(self, main, parent):
+        super(MenuUI, self).__init__(main, parent)
         self.surface = pygame.Surface(SCREEN_SIZE)
         self.title = pygame.font.Font(None, 72).render("Sokorez", True, (0, ) * 3)
         self.font = pygame.font.Font(None, 48)
@@ -20,14 +20,18 @@ class MenuUI(UI):
 
         self.counter = 12
         self.message = None
+
+        self.redraw()
+
+    def set_message(self, message=None):
+        self.counter = 12
+        self.message = None
         if message is not None:
             msg = pygame.font.Font(None, 72).render(message, True, (0, ) * 3)
             self.message = pygame.Surface(map(lambda x: x + 40, msg.get_size()))
             self.message.fill((0xEE, ) * 3)
             self.blink_msg_outline()
             self.message.blit(msg, (20, 20))
-
-        self.redraw()
 
     def blink_msg_outline(self):
         pygame.draw.rect(self.message, (0xFF if self.counter < 50 else 0, 0, 0),
@@ -66,5 +70,5 @@ class MenuUI(UI):
             if event.key == pygame.K_SPACE:
                 self.message = None
 
-    def handle_key_up(self, event):
-        pass
+    def on_reentry(self):
+        self.main.stop_multiplayer()

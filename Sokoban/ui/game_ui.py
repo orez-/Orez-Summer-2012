@@ -10,10 +10,10 @@ class GameUI(UI):
     PLAY_MODE = 1
     TYPE_MODE = 2
 
-    def __init__(self, main, player2, level="division_of_labor"):
-        super(GameUI, self).__init__(main)
+    def __init__(self, main, parent, level="division_of_labor"):
+        super(GameUI, self).__init__(main, parent)
         self.level_name = level
-        self.main = main
+        player2 = parent.player2
         loc, self.board = LevelLoad.load_level(level)
 
         self.player1 = Player(self.board, loc)
