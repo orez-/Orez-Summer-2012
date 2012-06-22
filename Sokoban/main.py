@@ -40,8 +40,9 @@ class Main:
     def ui_back(self):
         """ Set the current ui-view to its parent, discarding the current """
         if self.ui.parent is not None:
+            child = self.ui
             self.ui = self.ui.parent
-            self.ui.on_reentry()
+            self.ui.on_reentry(child)
 
     def push_ui(self, cls, *args, **kwargs):
         """ Push the new UI onto the old one. """

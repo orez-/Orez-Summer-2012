@@ -374,7 +374,9 @@ class Board:
         #print "After the RIGHTSHIFT:", self.data
 
         self.wall_wrap()
+        self.data = map(list, self.data)  # zip makes tuples: unacceptable
         self.stuff.normalize()
+        self.redraw()
         return xcut - 1, ycut - 1
 
     def wall_wrap(self):

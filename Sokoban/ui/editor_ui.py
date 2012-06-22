@@ -179,7 +179,7 @@ class EditorUI(UI):
         resized = False
         if x < 0:  # need more columns
             for i, row in enumerate(self.board.data):
-                self.board.data[i] = [Tile.WALL for _ in xrange(-x)] + row
+                self.board.data[i] = [Tile.WALL for _ in xrange(-x)] + list(row)
             self.board.stuff.shift_offset(x=x)  # all of our features are off
             self.scroll(x=-x)
             if self.start is not None:
@@ -272,6 +272,9 @@ class EditorUI(UI):
                     start=self.start)
             else:  # let them know they need a start zone.
                 pass
+
+    def on_reentry(self, save):
+        self.scroll(-save.dx, -save.dy)
 
 
 class PlayerStart(TileFeature):

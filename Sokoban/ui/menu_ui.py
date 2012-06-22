@@ -70,5 +70,5 @@ class MenuUI(UI):
             if event.key == pygame.K_SPACE:
                 self.message = None
 
-    def on_reentry(self):
+    def on_reentry(self, child):
         self.main.stop_multiplayer()

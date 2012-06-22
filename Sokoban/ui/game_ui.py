@@ -10,7 +10,7 @@ class GameUI(UI):
     PLAY_MODE = 1
     TYPE_MODE = 2
 
-    def __init__(self, main, parent, level="help_tile_test"):
+    def __init__(self, main, parent, level="division_of_labor"):
         super(GameUI, self).__init__(main, parent)
         self.level_name = level
 
@@ -28,7 +28,7 @@ class GameUI(UI):
         self.mode = GameUI.PLAY_MODE
 
     def reload_level(self):
-        return GameUI(self.main, self.which_player, self.level_name)
+        return GameUI(self.main, self.parent, self.level_name)
 
     def reblit(self, screen):
         center = (self.player1.x, self.player1.y)

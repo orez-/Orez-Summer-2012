@@ -24,7 +24,7 @@ class UI(object):
     def reblit(self, surf):
         pass
 
-    def on_reentry(self):
+    def on_reentry(self, child):
         pass
 
     def print_ui_stack(self):

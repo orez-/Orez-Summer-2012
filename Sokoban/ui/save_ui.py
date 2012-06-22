@@ -17,6 +17,9 @@ class SaveUI(UI):
         self.board = parent.board
         self.start = parent.start
 
+        self.dx = 0
+        self.dy = 0
+
         self.surface = pygame.Surface(SCREEN_SIZE)
         self.surface.fill((0xFF, ) * 3)
         self.surface.blit(BIG_FONT.render("Save your level!", True, (0, ) * 3),
@@ -49,8 +52,8 @@ class SaveUI(UI):
             self.redraw()
 
     def save_level(self):
-        dx, dy = self.board.normalize()
-        self.start.x -= dx
-        self.start.y -= dy
+        self.dx, self.dy = self.board.normalize()
+        self.start.x -= self.dx
+        self.start.y -= self.dy
         text = self.text.replace(" ", "_")
-        print LevelSave.save(text, self.board, self.start)
+        print "Level saved?: ", LevelSave.save(text, self.board, self.start)
