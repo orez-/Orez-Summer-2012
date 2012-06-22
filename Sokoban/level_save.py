@@ -40,12 +40,18 @@ class LevelLoad(object):
                 if step == 1:
                     # "2,3,2,1
                     # "2,3,4
-                    item_data = map(int, line.split(","))
+                    splat = line.split(",")
+                    item_data = map(int, splat[:3])
                     item = TileFeature.id_to_item(item_data[2])
-                    if len(item_data) < 4:
-                        item = item(board_toR)
+                    optional = splat[3:]
+                    if optional:
+                        if optional[0] and optional[0][0] == '"':  # pass as string
+                            optional = (','.join(optional))[1:]
+                            item = item(board_toR, optional)
+                        else:   # these are currently the only options :|
+                            item = item(board_toR, stuff_list[int(optional[0])])
                     else:
-                        item = item(board_toR, stuff_list[item_data[3]])
+                        item = item(board_toR)
                     stuff_list.append(item)
                     stuff[(item_data[0], item_data[1])] = item
             board_toR.add_stuff(stuff)

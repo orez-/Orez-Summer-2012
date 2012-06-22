@@ -35,11 +35,13 @@ class Tile:
 
 class Player:
     us_pic = pygame.image.load("imgs/us.png")
-    def __init__(self, board, (x, y), teammate=None):
+    def __init__(self, board, (x, y), me, teammate=None):
         self.x = x
         self.y = y
         lookup = ["me", "you"]
-        self.pic = pygame.image.load("imgs/"+lookup[int(teammate is not None)]+".png")
+        self.player2 = teammate is not None
+        self.me = me
+        self.pic = pygame.image.load("imgs/"+lookup[int(self.player2)]+".png")
         self.board = board
         self.teammate = teammate
         if self.teammate is not None:
@@ -109,7 +111,8 @@ class TileFeature(object):
             2:Button,
             3:Beartrap,
             4:Walltrap,
-            5:Timetrap}
+            5:Timetrap,
+            6:Helptrap}
         TileFeature.ITEM_TO_ID = {v:k for k,v in TileFeature.ID_TO_ITEM.items()}
 
     @staticmethod
@@ -152,6 +155,7 @@ class Snorkel(TileFeature):
     def draw(self, surf, x, y):
         surf.blit(self.img, (x, y), (0, 0, Tile.BLOCKSIZE, Tile.BLOCKSIZE))
 
+
 class Button(TileFeature):
     def __init__(self, board, activates=None):
         super(Button, self).__init__(board)
@@ -166,6 +170,7 @@ class Button(TileFeature):
     def draw(self, surf, x, y):
         pygame.draw.circle(surf, (128, 80, 0),
             map(lambda q: q + Tile.BLOCKSIZE/2, (x, y)), 5)
+
 
 class Beartrap(TileFeature):
     def __init__(self, board):
@@ -186,6 +191,7 @@ class Beartrap(TileFeature):
             color = (80, 128, 0)
         pygame.draw.circle(surf, color, map(lambda q: q + Tile.BLOCKSIZE/2, (x, y)), 20)
 
+
 class Walltrap(TileFeature):
     def step(self, stepper=None):
         for (y,x), w in self.board.stuff.items():
@@ -199,9 +205,11 @@ class Walltrap(TileFeature):
         color = (0x66, ) * 3
         pygame.draw.circle(surf, color, map(lambda q: q + Tile.BLOCKSIZE/2, (x, y)), 20)
 
+
 class Timetrap(TileFeature):
     def step(self, stepper=None):
-        stepper.time_trapped = not stepper.time_trapped
+        if stepper is not None:
+            stepper.time_trapped = not stepper.time_trapped
 
     def draw(self, surf, x, y):
         circ = map(lambda q: q + Tile.BLOCKSIZE/2, (x, y))
@@ -209,6 +217,24 @@ class Timetrap(TileFeature):
         pygame.draw.circle(surf, (0, ) * 3, circ, 20, 1)
         pygame.draw.line(surf, (0, ) * 3, circ, (circ[0] + 10, circ[1]))
         pygame.draw.line(surf, (0, ) * 3, circ, (circ[0], circ[1] - 15))
+
+
+class Helptrap(TileFeature):
+    def __init__(self, board, text="--default--"):
+        super(Helptrap, self).__init__(board)
+        self.text = str(text)
+
+    def step(self, stepper=None):
+        if stepper is not None and stepper.me:
+            self.board.client.send("HELP " + str(int(stepper.player2)) + " " +
+                self.text)
+
+    def draw(self, surf, x, y):
+        circ = map(lambda q: q + Tile.BLOCKSIZE/2, (x, y))
+        pygame.draw.circle(surf, (0xFF, 0xD7, 0x00), circ, 20)
+        pygame.draw.circle(surf, (0, ) * 3, circ, 20, 2)
+        surf.blit(pygame.font.Font(None, 40).render("?", True, (0, ) * 3), (x + 16, y + 12))
+
 
 class TileFeatureDict:
     def __init__(self, stuff={}, (xoff, yoff)=(0, 0)):
@@ -279,6 +305,9 @@ class Board:
             if isinstance(obj, Button) and self.data[y][x] == Tile.BLOCK:
                 obj.step()
         self.redraw()
+
+    def add_client(self, client):
+        self.client = client
 
     def recreate_surface(self):
         width = len(self.data[0])

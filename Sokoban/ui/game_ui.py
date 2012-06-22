@@ -10,18 +10,21 @@ class GameUI(UI):
     PLAY_MODE = 1
     TYPE_MODE = 2
 
-    def __init__(self, main, parent, level="division_of_labor"):
+    def __init__(self, main, parent, level="help_tile_test"):
         super(GameUI, self).__init__(main, parent)
         self.level_name = level
+
+        self.chatbox = Chatbox()
+
         player2 = parent.player2
         loc, self.board = LevelLoad.load_level(level)
+        self.board.add_client(self.main.client)
 
-        self.player1 = Player(self.board, loc)
-        self.player2 = Player(self.board, loc, self.player1)
+        self.player1 = Player(self.board, loc, not player2)
+        self.player2 = Player(self.board, loc, player2, self.player1)
         self.which_player = player2
         self.view_player = player2
 
-        self.chatbox = Chatbox()
         self.mode = GameUI.PLAY_MODE
 
     def reload_level(self):

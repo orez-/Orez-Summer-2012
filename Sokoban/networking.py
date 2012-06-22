@@ -45,7 +45,7 @@ class Server(threading.Thread):
                     if x:
                         other_player = self.slots[0]["player"]
                     self.slots[x] = {"type":Server.PLAYER, "conn":conn,
-                        "player":Player(self.board, (0,0), other_player),
+                        "player":Player(self.board, (0,0), False, other_player),
                         "buffer":""}
                     if x:
                         self.broadcast("START")  # TODO: probably want to send which map we're playing on
@@ -88,6 +88,8 @@ class Server(threading.Thread):
                         self.send("MSG 2 Unknown command: "+command, slot)
             else:
                 self.broadcast(' '.join([msg[0], str(slot)] + msg[1:]))
+        if msg[0] == "HELP":
+            self.send("MSG 3 ? " + US + "02" + ' '.join(msg[2:]), int(msg[1]))
 
     def send(self, msg, contact):
         if isinstance(contact, int):
