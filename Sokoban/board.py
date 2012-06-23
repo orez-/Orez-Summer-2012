@@ -88,9 +88,12 @@ class Player:
 class TileFeature(object):
     ID_TO_ITEM = None
     ITEM_TO_ID = None
+    CAN_LINK = []
 
     def __init__(self, board):
         self.board = board
+        self.linkee = None
+        self.linked = None
 
     def step(self, stepper=None):
         pass
@@ -103,6 +106,18 @@ class TileFeature(object):
 
     def draw(self, surf, px, py):
         pass
+
+    def set_linked(self, linked):
+        dirty = set([self])
+        if self.linked is not None:  # if the button has a beartrap
+            #dirty.add(self.linked)
+            self.linked.linkee = None  # the old beartrap has no button
+        self.linked = linked  # the button has a new beartrap
+        if linked.linkee is not None:  # if the new beartrap has a button
+            dirty.add(linked.linkee)
+            linked.linkee.linked = None  # the new beartrap's old button has no beartrap
+        linked.linkee = self  # the new beartrap's button is me!
+        return dirty
 
     @staticmethod
     def build_ids():
@@ -156,22 +171,6 @@ class Snorkel(TileFeature):
         surf.blit(self.img, (x, y), (0, 0, Tile.BLOCKSIZE, Tile.BLOCKSIZE))
 
 
-class Button(TileFeature):
-    def __init__(self, board, activates=None):
-        super(Button, self).__init__(board)
-        self.activates = activates
-
-    def step(self, stepper=None):
-        self.activates.activate()
-
-    def unstep(self):
-        self.activates.deactivate()
-
-    def draw(self, surf, x, y):
-        pygame.draw.circle(surf, (128, 80, 0),
-            map(lambda q: q + Tile.BLOCKSIZE/2, (x, y)), 5)
-
-
 class Beartrap(TileFeature):
     def __init__(self, board):
         super(Beartrap, self).__init__(board)
@@ -190,6 +189,24 @@ class Beartrap(TileFeature):
         if not self.active:
             color = (80, 128, 0)
         pygame.draw.circle(surf, color, map(lambda q: q + Tile.BLOCKSIZE/2, (x, y)), 20)
+
+
+class Button(TileFeature):
+    CAN_LINK = [Beartrap]
+    def __init__(self, board, activates=None):
+        super(Button, self).__init__(board)
+        if activates is not None:
+            self.set_linked(activates)
+
+    def step(self, stepper=None):
+        self.linked.activate()
+
+    def unstep(self):
+        self.linked.deactivate()
+
+    def draw(self, surf, x, y):
+        pygame.draw.circle(surf, (128, 80, 0),
+            map(lambda q: q + Tile.BLOCKSIZE/2, (x, y)), 5)
 
 
 class Walltrap(TileFeature):
@@ -246,6 +263,8 @@ class TileFeatureDict:
             self.stuff = stuff
             self.xoff = xoff
             self.yoff = yoff
+        self.font = pygame.font.Font(None, 24)
+        self.nums = []  # buttons
 
     def normalize(self):
         stuff = {}
@@ -259,9 +278,36 @@ class TileFeatureDict:
         self.xoff -= x
         self.yoff -= y
 
+    def remove_nums(self, dirty):
+        for d in dirty:
+            if d in self.nums:
+                self.nums[self.nums.index(d)] = None
+
+    def update_nums(self, dirty):
+        self.remove_nums(dirty)
+        for d in dirty:
+            if d.linked is not None:
+                self.add_to_nums(d)
+
+    def add_to_nums(self, thing):
+        if None in self.nums:
+            i = self.nums.index(None)
+            self.nums[i] = thing
+        else:
+            self.nums.append(thing)
+
     def reblit(self, surf):
         for (y, x), v in self.stuff.items():
             v.reblit(surf, x + self.xoff, y + self.yoff)
+            if v.linked and (v in self.nums):
+                i = self.nums.index(v)
+                surf.blit(self.font.render(str(i), True, (0x41, 0x69, 0xE1)),
+                    map(lambda q: q * Tile.BLOCKSIZE, (x + self.xoff, y + self.yoff)))
+            if v.linkee and (v.linkee in self.nums):
+                i = self.nums.index(v.linkee)
+                surf.blit(self.font.render(str(i), True, (0x41, 0x69, 0xE1)),
+                    (Tile.BLOCKSIZE * (x + self.xoff), 
+                     Tile.BLOCKSIZE * (y + self.yoff) + 35))
 
     def translate(self, (y, x)):
         return (self.yoff + y, self.xoff + x)
@@ -271,12 +317,14 @@ class TileFeatureDict:
 
     def __setitem__(self, (y, x), value):
         self.stuff[self.detranslate((y, x))] = value
+        #self.nums.append(value)
 
     def __getitem__(self, (y, x)):
-        return self.stuff[self.translate((y, x))]   # aren't you wrong too?
+        return self.stuff[self.detranslate((y, x))]
 
     def __delitem__(self, (y, x)):
-        del self.stuff[self.detranslate((y, x))]
+        key = self.detranslate((y, x))
+        del self.stuff[key]
 
     def __contains__(self, (y, x)):
         return self.detranslate((y, x)) in self.stuff
@@ -376,6 +424,7 @@ class Board:
         self.wall_wrap()
         self.data = map(list, self.data)  # zip makes tuples: unacceptable
         self.stuff.normalize()
+        self.recreate_surface()
         self.redraw()
         return xcut - 1, ycut - 1
 

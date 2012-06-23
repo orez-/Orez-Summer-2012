@@ -94,7 +94,9 @@ class EditorUI(UI):
                 if ey % (Tile.BLOCKSIZE + TS_SPACER) > TS_SPACER:
                     select += (ey // (Tile.BLOCKSIZE + TS_SPACER)) * TS_ACROSS
                     if len(self.tile_select.click_lookup) > select:
-                        self.tile_select.selected = self.tile_select.click_lookup[select]
+                        self.tile_select.selected = None
+                        if self.tile_select.click_lookup[select] is not None:
+                            self.tile_select.selected = self.tile_select.click_lookup[select][:]
                         print self.tile_select.selected, select
                         return
             self.tile_select.selected = None
@@ -133,14 +135,36 @@ class EditorUI(UI):
             if self.tile_select.selected[0] == 0:    # tiles
                 self.set_tile((x, y), self.tile_select.selected[1])
             elif self.tile_select.selected[0] == 1:  # stuff
-                if self.start is not None and (self.start.x, self.start.y) == (x, y):
-                    self.start = None
                 self.set_feature((x, y), self.tile_select.selected[1])
                 self.tile_select.selected = None
             elif self.tile_select.selected[0] == 2:  # player start
                 print x, y
                 self.set_start((x, y))
                 self.tile_select.selected = None
+            elif self.tile_select.selected[0] == 3:  # connector tool
+                if (y, x) not in self.board.stuff:
+                    self.tile_select.selected = None
+                    print "There's nothing there."
+                    return
+                item1 = self.board.stuff[(y, x)]
+                if self.tile_select.selected[1] is None:  # haven't connected
+                    self.tile_select.selected[1] = item1
+                    print "Connected to a", item1
+                else:   # one connection in place
+                    item2 = self.tile_select.selected[1]
+                    if item2.__class__ in item1.CAN_LINK:
+                        item1, item2 = item2, item1
+                    elif item1.__class__ not in item2.CAN_LINK:
+                        print "Man you can't link those things."
+                        self.tile_select.selected = None
+                        return
+                    # item2 can link to item1
+                    dirty = item2.set_linked(item1)
+                    self.board.stuff.update_nums(dirty)
+                    self.tile_select.selected = None
+                    self.board.redraw()
+                    print "Linked a", item2, "to a", item1
+
         #else:
         #    if self.select_rect is None:
         #        self.select_rect = [[x, y]]
@@ -176,6 +200,8 @@ class EditorUI(UI):
         return True
 
     def resize_board(self, x, y):
+        """ We're placing a new item at (x, y): do we need to
+        stretch the board? """
         resized = False
         if x < 0:  # need more columns
             for i, row in enumerate(self.board.data):
@@ -216,9 +242,19 @@ class EditorUI(UI):
 
     def set_feature(self, (x, y), feature_class):
         feature = feature_class
-        if feature_class.__class__ == type:
-            feature = feature_class(self.board)
+        if feature_class.__class__ == type:  # if you're actually a class
+            feature = feature_class(self.board)  # make one of me
         x, y = self.resize_board(x, y)
+        if self.start is not None and (x, y) == (self.start.x, self.start.y):
+            self.start = None
+        if (y, x) in self.board.stuff:
+            dirty = set()
+            d = self.board.stuff[(y, x)]
+            if d.linked is not None:
+                dirty.add(d)
+            if d.linkee is not None:
+                dirty.add(d.linkee)
+            self.board.stuff.remove_nums(dirty)
         self.board.stuff[(y, x)] = feature
         self.board.redraw()
 
@@ -230,6 +266,13 @@ class EditorUI(UI):
     def set_start(self, (x, y)):
         self.start = PlayerStart(x, y, self.view)
         if (y, x) in self.board.stuff:
+            dirty = set()
+            d = self.board.stuff[(y, x)]
+            if d.linked is not None: 
+                dirty.add(d)
+            if d.linkee is not None:
+                dirty.add(d.linkee)
+            self.board.stuff.remove_nums(dirty)
             del self.board.stuff[(y, x)]
             self.board.redraw()
 
@@ -271,7 +314,7 @@ class EditorUI(UI):
                 self.main.change_screen("save", board=self.board,
                     start=self.start)
             else:  # let them know they need a start zone.
-                pass
+                print "You must have a startpoint on the board before you can save."
 
     def on_reentry(self, save):
         self.scroll(-save.dx, -save.dy)
@@ -309,9 +352,8 @@ class TileSelect:
             self.click_lookup.append((0, tile, t_img))
             self.set_tile(t_img, i)
 
-        skip = TS_ACROSS - (i % TS_ACROSS)
-        print skip
-        self.click_lookup += [None] * (skip - 1)
+        skip, clicks = self.skip_line(i)
+        self.click_lookup += clicks
 
         for i, obj in enumerate((TileFeature.get_items()), i + skip):
             s = pygame.Surface((Tile.BLOCKSIZE, ) * 2, pygame.SRCALPHA)
@@ -319,9 +361,20 @@ class TileSelect:
             self.click_lookup.append((1, obj, s))
             self.set_tile(s, i)
 
+        skip, clicks = self.skip_line(i)
+        self.click_lookup += clicks
+
         img = PlayerStart.img
         self.click_lookup.append((2, None, img))
         self.set_tile(img, i + 1)
+
+        img = pygame.image.load("imgs/connector.png")
+        self.click_lookup.append([3, None, img])
+        self.set_tile(img, i + 2)
+
+    def skip_line(self, i):
+        skip = TS_ACROSS - (i % TS_ACROSS)
+        return skip, [None] * (skip - 1)
 
     def set_tile(self, img, i):
         self.tile_surface.blit(img,
@@ -375,10 +428,11 @@ class MoveChunk:
                 self.move_stuff[(fy, fx)] = v
                 del editor.board.stuff[(y, x)]
 
-        sx, sy = editor.start.x - bx, editor.start.y - by
-        if 0 < sx <= w and 0 < sy <= h:
-            self.move_start = (sx, sy)
-            editor.start = None
+        if editor.start is not None:
+            sx, sy = editor.start.x - bx, editor.start.y - by
+            if 0 <= sx < w and 0 <= sy < h:
+                self.move_start = (sx, sy)
+                editor.start = None
 
         if True:  # IF YOU WANT TO DELETE THE OLD TILES
             editor.resize_board(bx, by)

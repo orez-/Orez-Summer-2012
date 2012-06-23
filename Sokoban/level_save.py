@@ -14,11 +14,29 @@ class LevelSave(object):
             stri = '\n'.join([''.join([hex(elem)[2:] for elem in row])
                 for row in board.data])
             stri += "\n^" + str(start.x) + "," + str(start.y) + "\n"
-            for (y, x), v in board.stuff.items():
-                stri += ','.join(map(str,
-                    (y, x, TileFeature.object_to_id(v)))) + "\n"
+
+            did = []
+            reverse = {v:k for k, v in board.stuff.items()}
+            for d in board.stuff.items():
+                i, s = LevelSave.write_feature(did, reverse, *d)
+                stri += s
             f.write(stri)
         return True
+
+    @staticmethod
+    def write_feature(did, data, (y, x), feature):
+        stri = ""
+        optional = ""
+        if feature in did:  # did already
+            return did.index(feature), ""
+        if feature.CAN_LINK:
+            ny, nx = data[feature.linked]
+            i, s = LevelSave.write_feature(did, data, (ny, nx), feature.linked)
+            stri += s
+            optional = "," + str(i)
+        did.append(feature)
+        return len(did) - 1, stri + ','.join(map(str,
+            (y, x, TileFeature.object_to_id(feature)))) + optional + "\n"
 
 class LevelLoad(object):
     @staticmethod
