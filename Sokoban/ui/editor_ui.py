@@ -97,7 +97,6 @@ class EditorUI(UI):
                         self.tile_select.selected = None
                         if self.tile_select.click_lookup[select] is not None:
                             self.tile_select.selected = self.tile_select.click_lookup[select][:]
-                        print self.tile_select.selected, select
                         return
             self.tile_select.selected = None
         else:   # map proper
@@ -138,7 +137,6 @@ class EditorUI(UI):
                 self.set_feature((x, y), self.tile_select.selected[1])
                 self.tile_select.selected = None
             elif self.tile_select.selected[0] == 2:  # player start
-                print x, y
                 self.set_start((x, y))
                 self.tile_select.selected = None
             elif self.tile_select.selected[0] == 3:  # connector tool

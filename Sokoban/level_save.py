@@ -6,8 +6,8 @@ from board import Board, TileFeature
 
 class LevelSave(object):
     @staticmethod
-    def save(filename, board, start):
-        full_filename = LevelLoad.full_path(filename)
+    def save(full_filename, board, start):
+        #full_filename = LevelLoad.full_path(filename)
         if os.path.isfile(full_filename):
             return False
         with open(full_filename, "w") as f:
@@ -22,6 +22,14 @@ class LevelSave(object):
                 stri += s
             f.write(stri)
         return True
+
+    @staticmethod
+    def save_level(filename, board, start):
+        return LevelSave.save(LevelLoad.full_path(filename), board, start)
+
+    @staticmethod
+    def save_draft(filename, board, start):
+        return LevelSave.save(LevelLoad.full_path_draft(filename), board, start)
 
     @staticmethod
     def write_feature(did, data, (y, x), feature):
@@ -83,7 +91,11 @@ class LevelLoad(object):
 
     @staticmethod
     def full_path(*args):
-        return "maps/"+(''.join(map(str, args)))+".skb"
+        return "maps/" + (''.join(map(str, args))) + ".skb"
+
+    @staticmethod
+    def full_path_draft(*args):
+        return "draft/" + (''.join(map(str, args))) + ".skb"
 
     @staticmethod
     def load_level(filename, md5=None):
