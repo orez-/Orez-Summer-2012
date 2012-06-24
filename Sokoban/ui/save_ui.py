@@ -12,6 +12,7 @@ TOP_TEXT_Y = 20
 TEXT_BOX_Y = BIG_FONT.get_linesize() + TOP_TEXT_Y
 BUTTON_TEXT_SPACER = 5
 BUTTON_SPACER = 5
+BUTTON_X = BUTTON_SPACER * 5
 BUTTON_Y = 150
 BUTTONS_ACROSS = 2
 
@@ -86,7 +87,7 @@ class SaveUI(UI):
     def draw_button(self, words, (x, y)):
         txt = SMALL_FONT.render(words, True, (0, ) * 3)
         center = (self.w - txt.get_width()) // 2
-        px = BUTTON_SPACER + x * (self.w + BUTTON_SPACER)
+        px = BUTTON_X + x * (self.w + BUTTON_SPACER)
         py = BUTTON_Y + y * (self.h + BUTTON_SPACER)
         rect = ((px, py), (self.w, self.h))
         self.surface.fill((0xEE, ) * 3, rect)
@@ -98,8 +99,9 @@ class SaveUI(UI):
         surf.blit(self.save_surf, (15, 100))
 
     def handle_click(self, event):
+        self.save_success = None
         ex, ey = event.pos
-        px = ex - BUTTON_SPACER
+        px = ex - BUTTON_X
         py = ey - BUTTON_Y
         count = 0
         if 0 <= px % (self.w + BUTTON_SPACER) < self.w:

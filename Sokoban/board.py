@@ -255,19 +255,22 @@ class Helptrap(TileFeature):
 
 class TileFeatureDict:
     def __init__(self, stuff={}, (xoff, yoff)=(0, 0)):
+        self.show_numbers = False
+        self.font = pygame.font.Font(None, 24)
+        self.nums = []  # buttons
         if isinstance(stuff, TileFeatureDict):
+            self.show_numbers = stuff.show_numbers
             self.stuff = stuff.stuff
             self.xoff = stuff.xoff
             self.yoff = stuff.yoff
+            self.nums = stuff.nums
         else:
             self.stuff = stuff
             self.xoff = xoff
             self.yoff = yoff
-        self.font = pygame.font.Font(None, 24)
-        self.nums = []  # buttons
 
     def normalize(self):
-        stuff = {}
+        stuff = {}  # let's not do it in-place to avoid stepping on any toes
         for (y, x), v in self.stuff.items():
             stuff[self.translate((y, x))] = v
         self.stuff = stuff
@@ -299,15 +302,16 @@ class TileFeatureDict:
     def reblit(self, surf):
         for (y, x), v in self.stuff.items():
             v.reblit(surf, x + self.xoff, y + self.yoff)
-            if v.linked and (v in self.nums):
-                i = self.nums.index(v)
-                surf.blit(self.font.render(str(i), True, (0x41, 0x69, 0xE1)),
-                    map(lambda q: q * Tile.BLOCKSIZE, (x + self.xoff, y + self.yoff)))
-            if v.linkee and (v.linkee in self.nums):
-                i = self.nums.index(v.linkee)
-                surf.blit(self.font.render(str(i), True, (0x41, 0x69, 0xE1)),
-                    (Tile.BLOCKSIZE * (x + self.xoff), 
-                     Tile.BLOCKSIZE * (y + self.yoff) + 35))
+            if self.show_numbers:
+                if v.linked and (v in self.nums):
+                    i = self.nums.index(v)
+                    surf.blit(self.font.render(str(i), True, (0x41, 0x69, 0xE1)),
+                        map(lambda q: q * Tile.BLOCKSIZE, (x + self.xoff, y + self.yoff)))
+                if v.linkee and (v.linkee in self.nums):
+                    i = self.nums.index(v.linkee)
+                    surf.blit(self.font.render(str(i), True, (0x41, 0x69, 0xE1)),
+                        (Tile.BLOCKSIZE * (x + self.xoff), 
+                         Tile.BLOCKSIZE * (y + self.yoff) + 35))
 
     def translate(self, (y, x)):
         return (self.yoff + y, self.xoff + x)

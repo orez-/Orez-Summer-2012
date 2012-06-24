@@ -19,6 +19,7 @@ class EditorUI(UI):
         self.view = [0, 0]
         self.board = Board([[Tile.WALL]])
         self.board.add_stuff()
+        self.board.stuff.show_numbers = True
         self.surface = pygame.Surface(SCREEN_SIZE)
         self.highlight_surface = pygame.Surface(SCREEN_SIZE, pygame.SRCALPHA)
 

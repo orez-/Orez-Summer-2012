@@ -1,13 +1,12 @@
 import hashlib
 import os
 
-from board import Board, TileFeature
+from board import Board, TileFeature, TileFeatureDict
 
 
 class LevelSave(object):
     @staticmethod
     def save(full_filename, board, start):
-        #full_filename = LevelLoad.full_path(filename)
         if os.path.isfile(full_filename):
             return False
         with open(full_filename, "w") as f:
@@ -52,7 +51,7 @@ class LevelLoad(object):
         with open(filename, "r") as f:
             step = 0
             tiles = []
-            stuff = {}
+            stuff = TileFeatureDict()
             stuff_list = []
 
             for line in f:
@@ -63,19 +62,20 @@ class LevelLoad(object):
                         step = 1
                         continue
                     tiles.append(map(int, line.rstrip()))
-                if step == 1:
+                if step == 1:   # features
                     # "2,3,2,1
                     # "2,3,4
                     splat = line.split(",")
                     item_data = map(int, splat[:3])
                     item = TileFeature.id_to_item(item_data[2])
                     optional = splat[3:]
-                    if optional:
+                    if optional:  # more than just the coordinates and type
                         if optional[0] and optional[0][0] == '"':  # pass as string
                             optional = (','.join(optional))[1:]
                             item = item(board_toR, optional)
                         else:   # these are currently the only options :|
                             item = item(board_toR, stuff_list[int(optional[0])])
+                            stuff.add_to_nums(item)
                     else:
                         item = item(board_toR)
                     stuff_list.append(item)
