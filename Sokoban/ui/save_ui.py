@@ -1,7 +1,7 @@
 import pygame
 
 from ui import UI
-from constants import SCREEN_SIZE
+from constants import SCREEN_SIZE, valid_file_char
 from level_save import LevelSave
 
 pygame.font.init()

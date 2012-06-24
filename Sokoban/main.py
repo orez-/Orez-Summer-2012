@@ -5,7 +5,7 @@ from ui.game_ui import GameUI
 from ui.wait_ui import WaitUI
 from ui.editor_ui import EditorUI
 from ui.save_ui import SaveUI
-from ui.load_ui import LoadUI
+from ui.load_ui import LoadUI, LoadEditorUI
 from constants import SCREEN_SIZE
 from networking import Server, Client
 
@@ -60,9 +60,14 @@ class Main:
             self.push_ui(WaitUI, False)
             self.join_server()
         elif which == "join":
+            #self.push_ui(LoadUI)
+            self.push_ui(WaitUI, True)
+            self.join_server()
+        elif which == "editor load":
+            self.push_ui(LoadEditorUI)
+        elif which == "level select":  # before a game
+            self.ui_back()
             self.push_ui(LoadUI)
-            #self.push_ui(WaitUI, True)
-            #self.join_server()
         elif which == "no connect":
             self.ui_back()
             self.ui.set_message("Couldn't connect")
@@ -113,10 +118,7 @@ class Main:
                     else:
                         self.ui.handle_motion(event)
 
-            #self.ui.keep_moving()
             self.screen.fill((0, ) * 3)
-            #self.board.reblit(self.screen)
-            #self.player1.reblit(self.screen)
             self.ui.reblit(self.screen)
             pygame.display.flip()
         if restart:

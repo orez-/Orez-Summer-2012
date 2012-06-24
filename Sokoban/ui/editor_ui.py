@@ -307,11 +307,14 @@ class EditorUI(UI):
         if event.key == pygame.K_ESCAPE:
             self.main.ui_back()
 
+        if (event.key == pygame.K_l and
+                pygame.key.get_mods() | pygame.KMOD_CTRL):
+            self.main.change_screen("editor load")
+
         if (event.key == pygame.K_s and
                 pygame.key.get_mods() | pygame.KMOD_CTRL):
             if self.start is not None:
-                self.main.change_screen("save", board=self.board,
-                    start=self.start)
+                self.main.change_screen("save")
             else:  # let them know they need a start zone.
                 print "You must have a startpoint on the board before you can save."
 
