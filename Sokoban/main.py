@@ -5,6 +5,7 @@ from ui.game_ui import GameUI
 from ui.wait_ui import WaitUI
 from ui.editor_ui import EditorUI
 from ui.save_ui import SaveUI
+from ui.load_ui import LoadUI
 from constants import SCREEN_SIZE
 from networking import Server, Client
 
@@ -59,8 +60,9 @@ class Main:
             self.push_ui(WaitUI, False)
             self.join_server()
         elif which == "join":
-            self.push_ui(WaitUI, True)
-            self.join_server()
+            self.push_ui(LoadUI)
+            #self.push_ui(WaitUI, True)
+            #self.join_server()
         elif which == "no connect":
             self.ui_back()
             self.ui.set_message("Couldn't connect")

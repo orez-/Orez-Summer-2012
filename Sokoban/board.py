@@ -368,7 +368,6 @@ class Board:
         self.surface = pygame.Surface(map(lambda x: x * Tile.BLOCKSIZE, (width, height)))
 
     def normalize(self):
-        #print "\nMap was", self.data
         x_max, y_max, x_min, y_min = [None] * 4
         if self.stuff:
             xs, ys = zip(*[(x, y) for (y, x), _ in self.stuff.items()])

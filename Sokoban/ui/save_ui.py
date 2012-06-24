@@ -1,5 +1,4 @@
 import pygame
-from string import lowercase, uppercase
 
 from ui import UI
 from constants import SCREEN_SIZE
@@ -121,7 +120,7 @@ class SaveUI(UI):
             self.text = self.text[:-1]
             self.save_success = None
             self.redraw_text()
-        if event.unicode in (" " + lowercase + uppercase + ''.join(map(str, range(10)))):
+        if valid_file_char(event.unicode):
             self.text += event.unicode
             self.save_success = None
             self.redraw_text()

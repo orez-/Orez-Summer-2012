@@ -1,7 +1,7 @@
 import pygame
 import random
 
-from constants import SCREEN_SIZE, get_noun, get_adjective
+from constants import SCREEN_SIZE, get_noun, get_adjective, get_you_img, get_me_img
 from ui import UI
 
 class WaitUI(UI):
@@ -12,18 +12,8 @@ class WaitUI(UI):
         self.smaller_font = pygame.font.Font(None, 28)
         self.larger_font = pygame.font.Font(None, 108)
 
-        you_tiles = pygame.image.load("imgs/you.png")
-        TS = 50  # MAGICAL
-        you = pygame.Surface((TS, TS), pygame.SRCALPHA)
-        you.blit(you_tiles, (0, 0), (0, 0, TS, TS))
-        self.you = pygame.Surface((TS, TS))
-        self.you.fill((0xFF, ) * 3)
-        self.you.blit(pygame.transform.flip(you, True, False), (0, 0))
-
-        me_tiles = pygame.image.load("imgs/me.png")
-        self.me = pygame.Surface((TS, TS))
-        self.me.fill((0xFF, ) * 3)
-        self.me.blit(me_tiles, (0, 0), (0, 0, TS, TS))
+        self.you = get_you_img()
+        self.me = get_me_img()
 
         self.adjective = get_adjective()
         self.noun = get_noun()
