@@ -71,7 +71,7 @@ class LevelLoad(object):
                     optional = splat[3:]
                     if optional:  # more than just the coordinates and type
                         if optional[0] and optional[0][0] == '"':  # pass as string
-                            optional = (','.join(optional))[1:]
+                            optional = (','.join(optional))[1:].rstrip()
                             item = item(board_toR, optional)
                         else:   # these are currently the only options :|
                             item = item(board_toR, stuff_list[int(optional[0])])

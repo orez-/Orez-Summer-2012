@@ -269,10 +269,12 @@ class Button(TileFeature):
             self.set_linked(activates)
 
     def step(self, stepper=None):
-        self.linked.activate()
+        if self.linked is not None:
+            self.linked.activate()
 
     def unstep(self):
-        self.linked.deactivate()
+        if self.linked is not None:
+            self.linked.deactivate()
 
     def draw(self, surf, x, y):
         pygame.draw.circle(surf, (128, 80, 0),
@@ -313,8 +315,9 @@ class Helptrap(TileFeature):
 
     def step(self, stepper=None):
         if stepper is not None and stepper.me:
-            self.board.client.send("HELP " + str(int(stepper.player2)) + " " +
-                self.text)
+            if self.board.client is not None:
+                self.board.client.send("HELP " + str(int(stepper.player2)) +
+                    " " + self.text)
 
     def draw(self, surf, x, y):
         circ = map(lambda q: q + Tile.BLOCKSIZE/2, (x, y))

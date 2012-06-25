@@ -1,7 +1,7 @@
 import pygame
 
 from ui.menu_ui import MenuUI
-from ui.game_ui import GameUI
+from ui.game_ui import GameUI, SinglePlayerUI
 from ui.wait_ui import WaitUI
 from ui.editor_ui import EditorUI
 from ui.save_ui import SaveUI
@@ -73,6 +73,8 @@ class Main:
             self.ui.set_message("Couldn't connect")
         elif which == "save":
             self.push_ui(SaveUI)
+        elif which == "test":
+            self.push_ui(SinglePlayerUI)
         else:
             raise ValueError("I don't know the class "+str(which))
 

@@ -35,10 +35,16 @@ class SaveUI(UI):
             self.main.ui_back()
             self.main.ui_back()
 
+        def to_test():
+            self.normalize()
+            self.main.ui_back()
+            self.main.change_screen("test")
+
         self.options = [("Save as Draft", self.save_level(True)),
                         ("Save as Finished", self.save_level(False)),
                         ("Back to Editor", self.main.ui_back),
-                        ("Back to Menu", to_menu)]
+                        ("Back to Menu", to_menu),
+                        ("Test Map", to_test)]
         self.button_size = max(map(lambda (t, _): SMALL_FONT.size(t)[0], self.options))
         self.w = self.button_size + BUTTON_TEXT_SPACER * 2
         self.h = SMALL_FONT.get_linesize() + BUTTON_TEXT_SPACER * 2
@@ -125,11 +131,14 @@ class SaveUI(UI):
             self.save_success = None
             self.redraw_text()
 
+    def normalize(self):
+        self.dx, self.dy = self.board.normalize()
+        self.start.x -= self.dx
+        self.start.y -= self.dy
+
     def save_level(self, draft=False):
         def anon():
-            self.dx, self.dy = self.board.normalize()
-            self.start.x -= self.dx
-            self.start.y -= self.dy
+            self.normalize()
             text = self.text.replace(" ", "_")
             if draft:
                 self.save_success = LevelSave.save_draft(text, self.board, self.start)
