@@ -52,8 +52,13 @@ class Player:
         self.ice_dir = None
 
     def reblit(self, screen, center):
-        if self.board.data[self.y][self.x] == Tile.ICE:
-            self.x, self.y = self.x + self.ice_dir[0], self.y + self.ice_dir[1]
+        if self.board.data[self.y][self.x] == Tile.ICE and self.ice_dir is not None:
+            print "\nGonna slide from", self.x, self.y
+            if self.board.can_move(self, self.ice_dir):
+                self.x, self.y = self.x + self.ice_dir[0], self.y + self.ice_dir[1]
+                print "sliding", self.x, self.y
+            else:
+                self.ice_dir = None
         loc = map(lambda (x,y):
             (y-x+SCREEN_RADIUS) * Tile.BLOCKSIZE,
             zip(center, (self.x, self.y)))
@@ -438,6 +443,9 @@ class Board:
         self.data = [walls] + zip(*rdata) + [walls]
 
     def move_player(self, who, (dx, dy)):
+        tile_type = self.data[who.y][who.x]
+        if tile_type == Tile.ICE and who.ice_dir is not None:
+            return False
         x = self.can_move(who, (dx, dy))
         if x is True:
             if who.time_trapped:
@@ -447,14 +455,15 @@ class Board:
                     return False
                 return self.pull_block(who, (dx, dy))
             return True
-        if x is False:
+        elif x is False:
             return False
-        if x is Tile.BLOCK:
+        elif x is Tile.BLOCK:
             if who.time_trapped:
                 return False
             return self.push_block(who, (dx, dy))
 
     def can_move(self, who, (dx, dy)):
+        # What you're moving towards
         x, y = who.x + dx, who.y + dy
         tile_type = self.data[y][x]
         if (x, y) == (who.teammate.x, who.teammate.y):
@@ -463,7 +472,7 @@ class Board:
         if tile_type == Tile.WALL:
             return False
         elif tile_type == Tile.WATER:
-            return who.snorkel
+            return who.snorkel  # TODO: What if water?
         elif tile_type in (Tile.OPEN, Tile.GRAVEL):
             return True
         elif tile_type == Tile.BLOCK:
