@@ -357,7 +357,7 @@ class TileSelect:
         skip, clicks = self.skip_line(i)
         self.click_lookup += clicks
 
-        for i, obj in enumerate((TileFeature.get_items()), i + skip):
+        for i, obj in enumerate((TileFeature.get_items()), i + skip + 1):
             s = pygame.Surface((Tile.BLOCKSIZE, ) * 2, pygame.SRCALPHA)
             obj(None).draw(s, 0, 0)
             self.click_lookup.append((1, obj, s))
@@ -365,6 +365,7 @@ class TileSelect:
 
         skip, clicks = self.skip_line(i)
         self.click_lookup += clicks
+        i += skip
 
         img = PlayerStart.img
         self.click_lookup.append((2, None, img))
@@ -375,8 +376,8 @@ class TileSelect:
         self.set_tile(img, i + 2)
 
     def skip_line(self, i):
-        skip = TS_ACROSS - (i % TS_ACROSS)
-        return skip, [None] * (skip - 1)
+        skip = TS_ACROSS - (i % TS_ACROSS) - 1
+        return skip, [None] * skip
 
     def set_tile(self, img, i):
         self.tile_surface.blit(img,

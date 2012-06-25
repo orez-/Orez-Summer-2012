@@ -106,6 +106,12 @@ class TileFeature(object):
     def unstep(self):
         pass
 
+    def activate(self):
+        pass
+
+    def deactivate(self):
+        pass
+
     def reblit(self, surf, x, y):
         self.draw(surf, x * Tile.BLOCKSIZE, y * Tile.BLOCKSIZE)
 
@@ -132,7 +138,9 @@ class TileFeature(object):
             3:Beartrap,
             4:Walltrap,
             5:Timetrap,
-            6:Helptrap}
+            6:Helptrap,
+            7:LaunchSpring,
+            8:LaunchTarget}
         TileFeature.ITEM_TO_ID = {v:k for k,v in TileFeature.ID_TO_ITEM.items()}
 
     @staticmethod
@@ -176,6 +184,63 @@ class Snorkel(TileFeature):
         surf.blit(self.img, (x, y), (0, 0, Tile.BLOCKSIZE, Tile.BLOCKSIZE))
 
 
+class LaunchTarget(TileFeature):
+    def __init__(self, board):
+        super(LaunchTarget, self).__init__(board)
+        self.img = pygame.image.load("imgs/target.png")
+        self.open = True
+
+    def step(self, stepper=None):
+        self.open = False
+
+    def unstep(self):
+        self.open = True
+
+    def draw(self, surf, x, y):
+        surf.blit(self.img, (x, y))
+
+
+class LaunchSpring(TileFeature):
+    CAN_LINK = [LaunchTarget]
+    def __init__(self, board, activates=None):
+        super(LaunchSpring, self).__init__(board)
+        self.img = pygame.image.load("imgs/spring.png")
+        self.launch_me = None
+        if activates is not None:
+            self.set_linked(activates)
+
+    def step(self, stepper=None):
+        if stepper is None:
+            self.launch_me = Tile.BLOCK
+        else:
+            self.launch_me = stepper
+
+    def unstep(self):
+        self.launch_me = None
+
+    def activate(self):
+        if self.launch_me is not None and self.linked.open:
+            tx, ty = 0, 0
+            for (y, x), v in self.board.stuff.items():
+                if v is self.linked:
+                    tx, ty = x, y
+                    break
+            if self.launch_me == Tile.BLOCK:
+                for (y, x), v in self.board.stuff.items():
+                    if v is self:
+                        self.board.data[y][x] = Tile.OPEN
+                        break
+                self.board.data[ty][tx] = Tile.BLOCK
+            elif self.launch_me is not None:
+                self.launch_me.x, self.launch_me.y = tx, ty
+            self.linked.step()
+            self.launch_me = None
+            self.board.redraw()
+
+    def draw(self, surf, x, y):
+        surf.blit(self.img, (x, y))
+
+
 class Beartrap(TileFeature):
     def __init__(self, board):
         super(Beartrap, self).__init__(board)
@@ -197,7 +262,7 @@ class Beartrap(TileFeature):
 
 
 class Button(TileFeature):
-    CAN_LINK = [Beartrap]
+    CAN_LINK = [Beartrap, LaunchSpring]
     def __init__(self, board, activates=None):
         super(Button, self).__init__(board)
         if activates is not None:

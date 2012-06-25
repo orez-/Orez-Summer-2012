@@ -10,7 +10,7 @@ class GameUI(UI):
     PLAY_MODE = 1
     TYPE_MODE = 2
 
-    def __init__(self, main, parent, level="ice_test"):
+    def __init__(self, main, parent, level="spring_test"):
         super(GameUI, self).__init__(main, parent)
         self.level_name = level
 
