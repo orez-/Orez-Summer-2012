@@ -108,10 +108,12 @@ class LevelLoad(object):
     @staticmethod
     def archive(full_filename):
         i = 0
+        filename = full_filename[:-4]
         new_filename = full_filename
         while os.path.isfile(new_filename):
             i += 1
-            new_filename = LevelLoad.full_path(filename, " (", i, ")")
+            new_filename = ''.join([filename, "(", str(i), ").skb"])
+        print full_filename, "!!", new_filename
         os.rename(full_filename, new_filename)
 
     @staticmethod

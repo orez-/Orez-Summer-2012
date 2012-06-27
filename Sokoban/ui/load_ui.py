@@ -103,10 +103,6 @@ class LoadUI(UI):
             SMALL_FONT.render(self.suggest_text, True, (0, ) * 3), (0, 0))
 
     def handle_key(self, event):
-        #if event.key == pygame.K_TAB:
-        #    self.load_box.cur_tab ^= 1
-        #    self.load_box.reload_files()
-        #    self.load_box.redraw()
         if valid_file_char(event.unicode):
             self.load_box.add_char(event.unicode)
         elif event.key == pygame.K_BACKSPACE:
@@ -122,16 +118,13 @@ class LoadUI(UI):
             self.main.send_msg("LEVELOFF " + filename + " " +
                 LevelLoad.check_hash(dec_filename))
         elif event.key == pygame.K_TAB:
-            print self.suggest_data
             if self.suggest_data is not None:  # accept the suggestion
                 self.main.send_msg("LEVELACC " + ' '.join(self.suggest_data))
 
     def set_suggestion(self, filename, hashh):
         self.suggest_data = ("0", filename, hashh)
         dec_filename = "maps/" + filename + ".skb"
-        print "BEFORE", filename
         _filename = filename.replace("_", " ")
-        print "AFTER", filename
         self.suggest_text = "How about '" + _filename + "'"
         if LevelLoad.file_exists(dec_filename):  # I have this file...
             if not LevelLoad.check_hash(dec_filename, hashh):  # and it's not the same
@@ -139,10 +132,7 @@ class LoadUI(UI):
                 self.suggest_text = "How about my version of '" + _filename + "'"
         else:
             self.suggest_data = ("1", filename, hashh)
-        print "!", self.suggest_data
         self.redraw_suggest()
-        print "?", self.suggest_data
-        print "-", self.suggest_text
 
 
 class LoadBox(object):
@@ -164,12 +154,10 @@ class LoadBox(object):
         self.redraw()
 
     def down_key(self):
-        if self.load_results.selection < len(self.load_results.files) - 1:
-            self.load_results.selection += 1
+        self.load_results.down_key()
 
     def up_key(self):
-        if self.load_results.selection > 0:
-            self.load_results.selection -= 1
+        self.load_results.up_key()
 
     def add_char(self, char):
         self.load_input.text += char
@@ -189,12 +177,24 @@ class LoadBox(object):
     def reload_files(self):
         self.load_results.get_files(self.tab_data[2])
         self.load_results.selection = 0
+        self.load_results.scroll = 0
         self.set_to_prefix()
+        self.load_results.redraw()  # sometimes superfluous: work this out
 
     def set_to_prefix(self):
+        if self.load_results.letter_limits is None:
+            return
         top, bot = self.load_results.letter_limits
         if not (top < self.load_results.selection < bot):
             self.load_results.selection = self.load_results.letter_limits[0]
+            if self.load_results.check_scroll_up():
+                self.load_results.scroll = max(0, self.load_results.selection - 1)
+                self.load_results.redraw()
+            elif self.load_results.check_scroll_down():
+                self.load_results.scroll = max(0,
+                    self.load_results.selection - (R_HEIGHT // SMALL_FONT.get_linesize()) // 2)
+                self.load_results.redraw()
+
 
     def draw_tab(self, surf, which):
         x = (self.TAB_WIDTH + TAB_OVERFLOW) * which
@@ -233,9 +233,9 @@ class LoadResults(object):
     def __init__(self):
         self.surface = pygame.Surface((R_WIDTH, R_HEIGHT))
         self.files = []
-        # self.limited_files = []
         self._prefix = ""
         self.selection = 0
+        self.scroll = 0
 
         self.letter_limits = []
 
@@ -251,43 +251,70 @@ class LoadResults(object):
     prefix = property(lambda self: self._prefix, set_prefix)
 
     def get_files(self, mypath):
-        #self.selection = 0
-        #self.files = filter(lambda f: f[-4:] == ".skb" and isfile(join(mypath, f)), listdir(mypath))
         self.files = [f[:-4] for f in listdir(mypath)
                         if f[-4:] == ".skb" and isfile(join(mypath, f))]
         self.redraw()
+
+    def up_key(self):
+        if self.selection > 0:
+            self.selection -= 1
+            if self.check_scroll_up():
+                self.scroll -= 1
+                self.redraw()
+
+    def down_key(self):
+        if self.selection < len(self.files) - 1:
+            self.selection += 1
+            if self.check_scroll_down():
+                self.scroll += 1
+                self.redraw()
+
+    def get_letter_limits(self):
+        top, bot = None, len(self.files)
+        prefix = self.prefix.replace(" ", "_")
+        for i, x in enumerate(self.files):
+            if x[:len(self.prefix)].lower() == prefix:
+                if top is None:
+                    top = i
+            elif top is not None:
+                bot = i
+                break
+        if top is None:
+            self.letter_limits = None
+            return
+        self.letter_limits = [top, bot]
+
+    def check_scroll_up(self):
+        return self.selection - self.scroll <= 0 and self.scroll > 0
+
+    def check_scroll_down(self):
+        return ((self.selection - self.scroll) + 1 >=
+            R_HEIGHT // SMALL_FONT.get_linesize())
 
     def redraw(self):
         self.surface.fill((0xFF, ) * 3)
         pygame.draw.rect(self.surface, (0, ) * 3,
             ((0, 0), (R_WIDTH, R_HEIGHT)), 3)
 
-        top = None
-        bot = None
-        for i, txt in enumerate(self.files):
+        self.get_letter_limits()
+
+        start_y = int(-float(SPACER) / SMALL_FONT.get_linesize() + self.scroll)
+        end_y = int((R_HEIGHT - float(SPACER)) / SMALL_FONT.get_linesize() + self.scroll)
+
+        for i, txt in enumerate(self.files[start_y:end_y], start_y):
             txt = txt.replace("_", " ")
-            if txt[:len(self.prefix)].lower() == self._prefix:
-                if top is None:
-                    top = i
+            color = (0x99, ) * 3
+            if (self.letter_limits is not None and 
+                    self.letter_limits[0] <= i < self.letter_limits[1]):
                 color = (0, ) * 3
-            else:
-                if top is not None and bot is None:
-                    bot = i
-                color = (0x99, ) * 3
             self.surface.blit(SMALL_FONT.render(txt, True, color),
-                (SPACER, SPACER + i * SMALL_FONT.get_linesize()))
-
-        if top is None:
-            top = 0
-
-        if bot is None:
-            bot = len(self.files) - 1
-        self.letter_limits = [top, bot]
+                (SPACER, SPACER + (i - self.scroll) * SMALL_FONT.get_linesize()))
 
     def reblit(self, surf):
         surf.blit(self.surface, (SPACER + BOX_X, TAB_HEIGHT + SPACER + BOX_Y))
         surf.blit(self.hilite, (2 + BOX_X + SPACER,
-            2 + BOX_Y + SPACER + TAB_HEIGHT + self.selection * SMALL_FONT.get_linesize()))
+            2 + BOX_Y + SPACER + TAB_HEIGHT +
+            (self.selection - self.scroll) * SMALL_FONT.get_linesize()))
 
 
 class LoadInput(object):

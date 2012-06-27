@@ -29,7 +29,7 @@ def get_me_img():
     return me
 
 def valid_file_char(c):
-    return c and (c in (" " + lowercase + uppercase + ''.join(map(str, range(10)))))
+    return c and (c in (" ()" + lowercase + uppercase + ''.join(map(str, range(10)))))
 
 def get_adjective():
     return random.choice(["valiant", "attractive", "helpful",
