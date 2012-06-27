@@ -53,7 +53,8 @@ class Main:
         if which == "editor":
             self.push_ui(EditorUI)
         elif which == "game":
-            self.push_ui(GameUI)
+            self.ui_back()
+            self.push_ui(GameUI, **kwargs)
             #self.ui = GameUI(self, self.ui.player2)  # oh dis is bad.
         elif which == "host":
             self.start_server()
@@ -66,7 +67,7 @@ class Main:
         elif which == "editor load":
             self.push_ui(LoadEditorUI)
         elif which == "level select":  # before a game
-            self.ui_back()
+            #self.ui_back()
             self.push_ui(LoadUI)
         elif which == "no connect":
             self.ui_back()
@@ -92,6 +93,7 @@ class Main:
         if self.client is not None:
             self.client.stop()
             self.client = None
+        print "multiplayer stopped"
 
     def stop(self):
         self.done = True

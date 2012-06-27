@@ -5,6 +5,7 @@ from Queue import Queue
 
 from board import Player, Board
 from constants import RS, US, get_noun
+from level_save import LevelLoad
 
 HOST = socket.gethostname()
 PORT = 11173
@@ -44,10 +45,10 @@ class Server(threading.Thread):
                     other_player = None
                     if x:
                         other_player = self.slots[0]["player"]
-                    self.slots[x] = {"type":Server.PLAYER, "conn":conn,
-                        "player":Player(self.board, (0,0), False, other_player),
-                        "buffer":""}
-                    if x:
+                    self.slots[x] = {"type": Server.PLAYER, "conn": conn,
+                        "player": Player(self.board, (0, 0), False, other_player),
+                        "buffer": ""}
+                    if x:  # second player in
                         self.broadcast("START")  # TODO: probably want to send which map we're playing on
                 else:   # returning player's command
                     sender = self.get_sender(c)
@@ -67,7 +68,7 @@ class Server(threading.Thread):
         if msg[0] == "MOVED":
             #self.slots[slot]["player"].move(int(msg[1]), int(msg[2]))
             self.broadcast(' '.join((msg[0], str(slot), msg[1], msg[2])))
-        if msg[0] == "MSG":
+        elif msg[0] == "MSG":
             if msg[1][:1] == "/":
                 command = msg[1][1:]
                 if command in self.poll_commands:
@@ -88,8 +89,16 @@ class Server(threading.Thread):
                         self.send("MSG 2 Unknown command: "+command, slot)
             else:
                 self.broadcast(' '.join([msg[0], str(slot)] + msg[1:]))
-        if msg[0] == "HELP":
+        elif msg[0] == "HELP":
             self.send("MSG 3 ? " + US + "02" + ' '.join(msg[2:]), int(msg[1]))
+        elif msg[0] == "LEVELOFF":  # propagate
+            self.send(' '.join(msg), int(not slot))
+        elif msg[0] == "LEVELACC":  # propagate
+            self.send(' '.join(msg), int(not slot))
+        elif msg[0] == "LEVELULD":
+            self.send(' '.join(msg), int(not slot))
+        elif msg[0] == "STARTGAME":
+            self.broadcast("STARTGAME " + msg[1])
 
     def send(self, msg, contact):
         if isinstance(contact, int):
@@ -176,9 +185,34 @@ class Client(threading.Thread):
             if person:
                 p = self.main.ui.player2
             p.move(dx, dy)
-        if msg[0] == "START":
-            self.main.change_screen("game")
-        if msg[0] == "MSG":
+        elif msg[0] == "START":
+            self.main.change_screen("level select")
+        elif msg[0] == "MSG":
             self.main.ui.chatbox.message(int(msg[1]), ' '.join(msg[2:]))
-        if msg[0] == "RESTART":
+        elif msg[0] == "RESTART":
             self.main.restart()
+        elif msg[0] == "LEVELOFF":  # make sure you're correct
+            filename, hashh = msg[1:3]
+            self.main.ui.set_suggestion(filename, hashh)
+        elif msg[0] == "LEVELACC":  # Level accepted: start?
+            send_map, filename, hashh = msg[1:]
+            print msg[1:]
+            if int(send_map):
+                with open("maps/" + filename + ".skb", "r") as f:
+                    self.main.send_msg("LEVELULD " + filename + " " + f.read())
+                    print "Message sent????"
+            else:
+                self.main.send_msg("STARTGAME " + filename)
+        elif msg[0] == "LEVELULD":  # Level uploaded: save it!
+            print "got a level ULD"
+            filename = msg[1]
+            full_filename = LevelLoad.full_path(filename)
+            data = ' '.join(msg[2:])
+            if LevelLoad.file_exists(full_filename):
+                LevelLoad.archive(full_filename)
+            with open(full_filename, "w") as f:
+                f.write(data)
+            self.main.send_msg("STARTGAME " + filename)
+        elif msg[0] == "STARTGAME":  # everyone's ready!
+            print msg
+            self.main.change_screen("game", level=msg[1])

@@ -45,6 +45,7 @@ class LevelSave(object):
         return len(did) - 1, stri + ','.join(map(str,
             (y, x, TileFeature.object_to_id(feature)))) + optional + "\n"
 
+
 class LevelLoad(object):
     @staticmethod
     def load(filename):
@@ -85,9 +86,12 @@ class LevelLoad(object):
             # handle data
 
     @staticmethod
-    def check_hash(filename, md5):
-        with open(filename, r) as f:
-            return hashlib.md5(f.read()) == md5  # probably the same file
+    def check_hash(filename, md5=None):
+        with open(filename, "r") as f:
+            file_md5 = hashlib.md5(f.read()).hexdigest()
+            if md5 is None:
+                return file_md5
+            return file_md5 == md5  # probably the same file
 
     @staticmethod
     def full_path(*args):
@@ -96,6 +100,19 @@ class LevelLoad(object):
     @staticmethod
     def full_path_draft(*args):
         return "draft/" + (''.join(map(str, args))) + ".skb"
+
+    @staticmethod
+    def file_exists(filename):
+        return os.path.isfile(filename)
+
+    @staticmethod
+    def archive(full_filename):
+        i = 0
+        new_filename = full_filename
+        while os.path.isfile(new_filename):
+            i += 1
+            new_filename = LevelLoad.full_path(filename, " (", i, ")")
+        os.rename(full_filename, new_filename)
 
     @staticmethod
     def load_level(filename, md5=None):
@@ -108,12 +125,6 @@ class LevelLoad(object):
                 # we still want to download the new data into this file, but
                 # we don't want to lose the old data. So we store the old in
                 # the next filename (#)
-                i = 0
-                new_filename = full_filename
-                while os.path.isfile(new_filename):
-                    i += 1
-                    new_filename = LevelLoad.full_path(filename, " (", i, ")")
-                os.rename(full_filename, new_filename)
+                LevelLoad.archive(full_filename)
             # TODO: ask to download the file, and then do so.
-            pass
         return LevelLoad.load(full_filename)

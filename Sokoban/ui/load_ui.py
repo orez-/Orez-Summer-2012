@@ -60,7 +60,7 @@ class LoadEditorUI(UI):
         if event.key == pygame.K_RETURN:
             filename = self.load_box.load_results.files[
                 self.load_box.load_results.selection]
-            full_filename = self.load_box.tab_data[2] + "/" + filename
+            full_filename = self.load_box.tab_data[2] + "/" + filename + ".skb"
             start, board = LevelLoad.load(full_filename)
             board.stuff.show_numbers = True
             board.redraw()
@@ -78,10 +78,13 @@ class LoadUI(UI):
             [["Maps", (0xD6, ) * 3, "maps"]])
         self.surface = pygame.Surface(SCREEN_SIZE)
 
-        #self.suggestion = 
+        self.suggest_text = ""
+        self.suggest_surf = pygame.Surface((SCREEN_SIZE[0], SMALL_FONT.get_linesize()))
+        self.suggest_data = None
 
         self.me = get_me_img()
         self.you = get_you_img()
+        self.redraw_suggest()
         self.redraw()
 
     def redraw(self):
@@ -92,6 +95,12 @@ class LoadUI(UI):
     def reblit(self, surf):
         surf.blit(self.surface, (0, 0))
         self.load_box.reblit(surf)
+        self.surface.blit(self.suggest_surf, (5, 520))
+
+    def redraw_suggest(self):
+        self.suggest_surf.fill((0xEE, ) * 3)
+        self.suggest_surf.blit(
+            SMALL_FONT.render(self.suggest_text, True, (0, ) * 3), (0, 0))
 
     def handle_key(self, event):
         #if event.key == pygame.K_TAB:
@@ -100,16 +109,40 @@ class LoadUI(UI):
         #    self.load_box.redraw()
         if valid_file_char(event.unicode):
             self.load_box.add_char(event.unicode)
-        if event.key == pygame.K_BACKSPACE:
+        elif event.key == pygame.K_BACKSPACE:
             self.load_box.del_char()
-        if event.key == pygame.K_UP:
+        elif event.key == pygame.K_UP:
             self.load_box.up_key()
-        if event.key == pygame.K_DOWN:
+        elif event.key == pygame.K_DOWN:
             self.load_box.down_key()
-        if event.key == pygame.K_RETURN:
+        elif event.key == pygame.K_RETURN:
             filename = self.load_box.load_results.files[
                 self.load_box.load_results.selection]
-            print filename
+            dec_filename = "maps/" + filename + ".skb"
+            self.main.send_msg("LEVELOFF " + filename + " " +
+                LevelLoad.check_hash(dec_filename))
+        elif event.key == pygame.K_TAB:
+            print self.suggest_data
+            if self.suggest_data is not None:  # accept the suggestion
+                self.main.send_msg("LEVELACC " + ' '.join(self.suggest_data))
+
+    def set_suggestion(self, filename, hashh):
+        self.suggest_data = ("0", filename, hashh)
+        dec_filename = "maps/" + filename + ".skb"
+        print "BEFORE", filename
+        _filename = filename.replace("_", " ")
+        print "AFTER", filename
+        self.suggest_text = "How about '" + _filename + "'"
+        if LevelLoad.file_exists(dec_filename):  # I have this file...
+            if not LevelLoad.check_hash(dec_filename, hashh):  # and it's not the same
+                self.suggest_data = ("1", filename, hashh)
+                self.suggest_text = "How about my version of '" + _filename + "'"
+        else:
+            self.suggest_data = ("1", filename, hashh)
+        print "!", self.suggest_data
+        self.redraw_suggest()
+        print "?", self.suggest_data
+        print "-", self.suggest_text
 
 
 class LoadBox(object):
@@ -200,7 +233,7 @@ class LoadResults(object):
     def __init__(self):
         self.surface = pygame.Surface((R_WIDTH, R_HEIGHT))
         self.files = []
-        self.limited_files = []
+        # self.limited_files = []
         self._prefix = ""
         self.selection = 0
 
@@ -219,22 +252,10 @@ class LoadResults(object):
 
     def get_files(self, mypath):
         #self.selection = 0
-        self.files = filter(lambda f: isfile(join(mypath, f)), listdir(mypath))
-        self.limit_files()
+        #self.files = filter(lambda f: f[-4:] == ".skb" and isfile(join(mypath, f)), listdir(mypath))
+        self.files = [f[:-4] for f in listdir(mypath)
+                        if f[-4:] == ".skb" and isfile(join(mypath, f))]
         self.redraw()
-
-    def limit_files(self):
-        pass
-#        self.limited_files = []
-#        for i, txt in enumerate(self.files):
-#            if txt[:len(self.prefix)] == self._prefix:
-#                break
-#
-#        for i, txt in enumerate(self.files[i:]):
-#            if txt[:len(self.prefix)] != self._prefix:
-#                break
-#            txt = txt.replace("_", " ")
-#            self.limited_files.append(txt)
 
     def redraw(self):
         self.surface.fill((0xFF, ) * 3)
@@ -253,7 +274,7 @@ class LoadResults(object):
                 if top is not None and bot is None:
                     bot = i
                 color = (0x99, ) * 3
-            self.surface.blit(SMALL_FONT.render(txt[:-4], True, color),
+            self.surface.blit(SMALL_FONT.render(txt, True, color),
                 (SPACER, SPACER + i * SMALL_FONT.get_linesize()))
 
         if top is None:
