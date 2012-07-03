@@ -1,12 +1,12 @@
 import pygame
 import random
-SCALE = 5
+SCALE = 1
 SCALE_ME = lambda q: q * 2 * SCALE
 SCALE_WIDTH = lambda q: (q * 2 - 1) * SCALE
 SCREEN_SLOTS = (50, 50)
 SCREEN_SIZE = map(SCALE_WIDTH, SCREEN_SLOTS)
 
-COLORS = {(2, 3): ((136, 0, 21), (237, 28, 36)),
+COLORS = {(2, 3): ((234, 153, 217), (232, 0, 162)),
           (3, 2): ((181, 230, 29), (34, 177, 76)),
           (2, 2): ((153, 217, 234), (0, 162, 232)),
           (1, 2): ((192, 114, 192), (163, 73, 164)),
@@ -30,12 +30,51 @@ class MapDS:
                 return False
         return True
 
-    def in_bounds(self, (x, y), (w, h)):
+    def in_bounds(self, (x, y), (w, h)=(1, 1)):
         return (0 <= x < SCREEN_SLOTS[0] + 1 - w and
                 0 <= y < SCREEN_SLOTS[1] + 1 - h)
 
     def valid_heights(self, (w, h)):
         pass
+
+    def try_fit(self, (x, y), (w, h)):
+        """ Some part of this figure must be on (x, y) """
+        left_clamp = x
+        for left_clamp in xrange(x - 1, x - w, -1):
+            if not (self.in_bounds((left_clamp, y)) and not self.get_at((left_clamp, y))):
+                left_clamp += 1
+                break
+
+        right_clamp = x + 1
+        for right_clamp in xrange(x + 1, x + w):
+            if not (self.in_bounds((right_clamp, y)) and not self.get_at((right_clamp, y))):
+                break
+        right_clamp -= w
+
+        top_clamp = y
+        for top_clamp in xrange(y - 1, y - h, -1):
+            if not (self.in_bounds((x, top_clamp)) and not self.get_at((x, top_clamp))):
+                top_clamp += 1
+                break
+
+        bot_clamp = y + 1
+        for bot_clamp in xrange(y + 1, y + h):
+            if not (self.in_bounds((x, bot_clamp)) and not self.get_at((x, bot_clamp))):
+                break
+        bot_clamp -= h
+
+        possible_spots = self.room_iter((right_clamp, bot_clamp),
+            (left_clamp - right_clamp + 1, top_clamp - bot_clamp + 1))
+
+        final_cut = []
+        for spot in possible_spots:
+            if self.can_fit(spot, (w, h)):
+                final_cut.append(spot)
+
+        if not final_cut:
+            return None
+
+        return random.choice(final_cut)
 
     def room_iter(self, (x, y), (w, h)):
         for dx in xrange(x, x + w):
@@ -94,19 +133,11 @@ class Main:
                 self.screen.fill(vibr, (map(SCALE_ME, (vx + x, vy + y)), (SCALE, SCALE)))
 
     def expand_room(self, loc=(0, 0)):
-        """self.draw_room((0, 0), (2, 3))
-        self.add_room((1, 3), (2, 2))
-        self.add_room((2, 0), (3, 2))
-        self.add_room((1, 5), (2, 1))
-        self.add_room((3, 2), (1, 2))
-        self.add_room((3, 4), (1, 2))
-        self.add_room((4, 2), (2, 1))
-        self.add_room((4, 3), (2, 3))
-        self.add_room((2, 2), (1, 1))"""
         next = set([(0, 0)])
         while next:
             loc = next.pop()
-            if not self.map.in_bounds(loc, (1, 1)) or self.map.get_at(loc) is not None:
+            if (not self.map.in_bounds(loc) or
+                    self.map.get_at(loc) is not None):
                 continue  # or something
             options = [(2, 3), (3, 2), (2, 2), (1, 2), (2, 1)]
             while 1:
@@ -115,9 +146,10 @@ class Main:
                     self.add_room(loc, shape)
                     break
                 shape = random.choice(options)
-                if self.map.can_fit(loc, shape):
-                    self.add_room(loc, shape)
-                    room_locs = set(self.map.room_iter(loc, shape))
+                fit = self.map.try_fit(loc, shape)
+                if fit:
+                    self.add_room(fit, shape)
+                    room_locs = set(self.map.room_iter(fit, shape))
                     close_locs = set(sum([
                         [(dx-1, dy), (dx+1, dy), (dx, dy-1), (dx, dy+1)]
                         for dx, dy in room_locs], []))
