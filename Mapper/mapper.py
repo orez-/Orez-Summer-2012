@@ -1,6 +1,6 @@
 import pygame
 import random
-SCALE = 1
+SCALE = 5
 SCALE_ME = lambda q: q * 2 * SCALE
 SCALE_WIDTH = lambda q: (q * 2 - 1) * SCALE
 SCREEN_SLOTS = (50, 50)
@@ -12,6 +12,15 @@ COLORS = {(2, 3): ((234, 153, 217), (232, 0, 162)),
           (1, 2): ((192, 114, 192), (163, 73, 164)),
           (2, 1): ((112, 146, 190), (63, 72, 204)),
           (1, 1): ((0, 0, 0), (255, 127, 39))}
+
+
+class Locection(tuple):
+    def __eq__(self, other):
+        return other[:2] == self[:2]
+
+    def __hash__(self):
+        return hash(self[:2])
+
 
 class MapDS:
     def __init__(self):
@@ -33,9 +42,6 @@ class MapDS:
     def in_bounds(self, (x, y), (w, h)=(1, 1)):
         return (0 <= x < SCREEN_SLOTS[0] + 1 - w and
                 0 <= y < SCREEN_SLOTS[1] + 1 - h)
-
-    def valid_heights(self, (w, h)):
-        pass
 
     def try_fit(self, (x, y), (w, h)):
         """ Some part of this figure must be on (x, y) """
@@ -118,6 +124,21 @@ class Main:
         self.map = MapDS()
         self.expand_room()
 
+    def add_path(self, (x, y), dr):
+        if dr == 1:
+            self.draw_path((x, y), 0)
+        if dr == 2:
+            self.draw_path((x - 1, y), 1)
+        if dr == 4:
+            self.draw_path((x, y - 1), 0)
+        if dr == 8:
+            self.draw_path((x, y), 1)
+
+    def draw_path(self, (x, y), horiz):
+        path_color = (0xAA, ) * 3
+        px, py = (SCALE_ME(x + .5), SCALE_ME(y)) if horiz else (SCALE_ME(x), SCALE_ME(y + .5))
+        self.screen.fill(path_color, ((px, py), (SCALE, SCALE)))
+
     def add_room(self, (x, y), (w, h)):
         self.map.add_room((x, y), (w, h))
         self.draw_room((x, y), (w, h))
@@ -132,13 +153,15 @@ class Main:
             for vy in xrange(h):
                 self.screen.fill(vibr, (map(SCALE_ME, (vx + x, vy + y)), (SCALE, SCALE)))
 
-    def expand_room(self, loc=(0, 0)):
-        next = set([(0, 0)])
+    def expand_room(self):
+        next = set([(0, 0, 0)])
         while next:
             loc = next.pop()
+            loc, dr = loc[:2], loc[2]
             if (not self.map.in_bounds(loc) or
                     self.map.get_at(loc) is not None):
                 continue  # or something
+            self.add_path(loc, dr)
             options = [(2, 3), (3, 2), (2, 2), (1, 2), (2, 1)]
             while 1:
                 if not options:
@@ -150,8 +173,9 @@ class Main:
                 if fit:
                     self.add_room(fit, shape)
                     room_locs = set(self.map.room_iter(fit, shape))
-                    close_locs = set(sum([
-                        [(dx-1, dy), (dx+1, dy), (dx, dy-1), (dx, dy+1)]
+                    close_locs = set(sum([map(Locection,
+                        [(dx-1, dy, 8), (dx+1, dy, 2),
+                         (dx, dy-1, 1), (dx, dy+1, 4)])
                         for dx, dy in room_locs], []))
                     next |= close_locs - room_locs
                     break
