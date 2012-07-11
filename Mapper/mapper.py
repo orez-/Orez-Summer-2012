@@ -1,25 +1,145 @@
 import pygame
 import random
-SCALE = 5
-SCALE_ME = lambda q: q * 2 * SCALE
-SCALE_WIDTH = lambda q: (q * 2 - 1) * SCALE
+SCALE = 4
 SCREEN_SLOTS = (50, 50)
-SCREEN_SIZE = map(SCALE_WIDTH, SCREEN_SLOTS)
 
 COLORS = {(2, 3): ((234, 153, 217), (232, 0, 162)),
           (3, 2): ((181, 230, 29), (34, 177, 76)),
           (2, 2): ((153, 217, 234), (0, 162, 232)),
           (1, 2): ((192, 114, 192), (163, 73, 164)),
-          (2, 1): ((112, 146, 190), (63, 72, 204)),
+          (2, 1): ((44, 86, 255), (63, 72, 204)),
           (1, 1): ((0, 0, 0), (255, 127, 39))}
 
 
-class Locection(tuple):
-    def __eq__(self, other):
-        return other[:2] == self[:2]
+class MapGUI:
+    FRAMES = 10
+    def __init__(self):
+        self.spacing = 1
+        self.surface = pygame.Surface(map(self.scale_coord_width, SCREEN_SLOTS))
+        self.surface.fill((0xFF, ) * 3)
 
-    def __hash__(self):
-        return hash(self[:2])
+        self.size = map(self.scale_coord_width, SCREEN_SLOTS)
+
+        self.map = MapDS()
+        self.expand_room()
+        self.preload_expansion()
+
+        self.dir = 0
+        self.last_dir = 1
+        self.frame = MapGUI.FRAMES
+
+    def scale_coord(self, q):
+        return int(q * (self.spacing + 1) * SCALE)
+
+    def scale_coord_width(self, q):
+        return int((q * (self.spacing + 1) - self.spacing) * SCALE)
+
+    def draw_room(self, (x, y), (w, h)):
+        SCALE_ME = self.scale_coord
+        SCALE_WIDTH = self.scale_coord_width
+        drab, vibr = COLORS[(w, h)]
+        px, py = map(SCALE_ME, (x, y))
+
+        self.surface.fill(drab, ((px, py), map(SCALE_WIDTH, (w, h))))
+        for vx in xrange(w):
+            for vy in xrange(h):
+                self.surface.fill(vibr,
+                        (map(SCALE_ME, (vx + x, vy + y)), (SCALE, SCALE)))
+
+    def draw_path(self, (x, y), horiz):
+        SCALE_ME = self.scale_coord
+        SCALE_WIDTH = self.scale_coord_width
+        path_color = (0xAA, ) * 3
+        if horiz:
+            loc = SCALE_ME(x) + SCALE, SCALE_ME(y)
+            size = self.spacing * SCALE, SCALE
+        else:
+            loc = SCALE_ME(x), SCALE_ME(y) + SCALE
+            size = SCALE, self.spacing * SCALE
+        self.surface.fill(path_color, (loc, size))
+
+    def add_path(self, (x, y), dr):
+        if dr == 1:
+            x, y, horiz = x, y, 0
+        elif dr == 2:
+            x, y, horiz = x - 1, y, 1
+        elif dr == 4:
+            x, y, horiz = x, y - 1, 0
+        elif dr == 8:
+            x, y, horiz = x, y, 1
+        else:
+            return
+        self.draw_path((x, y), horiz)
+        self.map.all_paths.add((x, y, horiz))
+
+    def add_room(self, (x, y), (w, h)):
+        self.map.add_room((x, y), (w, h))
+        self.draw_room((x, y), (w, h))
+
+    def preload_expansion(self):
+        FRAMES = MapGUI.FRAMES
+        temp_surf = self.surface
+        spacing = self.spacing
+
+        self.animation_surfs = []
+        for i in xrange(FRAMES + 1):
+            self.spacing = (float(i) / FRAMES)
+            self.surface = pygame.Surface(self.size)
+            self.redraw()
+            self.animation_surfs.append(self.surface)
+
+        self.spacing = spacing
+        self.surface = temp_surf
+
+    def redraw(self):
+        self.surface.fill((0xFF, ) * 3)
+        for (x, y), (w, h) in self.map.all_rooms.values():
+            self.draw_room((x, y), (w, h))
+
+        for x, y, horiz in self.map.all_paths:
+            self.draw_path((x, y), horiz)
+
+    def reblit(self, surf):
+        if 0 <= self.frame + self.dir <= MapGUI.FRAMES:
+            self.frame += self.dir
+        else:
+            self.dir = 0
+        surf.blit(self.animation_surfs[self.frame], (0, 0))
+
+    def expand_room(self):
+        next = {(0, 0): 0}
+        while next:
+            loc, dr = next.popitem()
+            if (not self.map.in_bounds(loc) or
+                    self.map.get_at(loc) is not None):
+                continue  # or something
+            self.add_path(loc, dr)
+            options = [(2, 3), (3, 2), (2, 2), (1, 2), (2, 1)]
+            while 1:
+                if not options:
+                    shape = (1, 1)
+                    self.add_room(loc, shape)
+                    break
+                shape = random.choice(options)
+                fit = self.map.try_fit(loc, shape)
+                if fit:
+                    self.add_room(fit, shape)
+                    room_locs = set(self.map.room_iter(fit, shape))
+
+                    dictlist = ({(dx - 1, dy): 8, (dx + 1, dy): 2,
+                                 (dx, dy - 1): 1, (dx, dy + 1): 4}
+                                 for dx, dy in room_locs)
+
+                    close_locs = {}
+                    for d in dictlist:
+                        close_locs.update(d)
+
+                    for loc in room_locs:  # close_locs -= room_locs
+                        close_locs.pop(loc, None)
+
+                    next.update(close_locs)  # 
+                    break
+                del options[options.index(shape)]
 
 
 class MapDS:
@@ -27,6 +147,7 @@ class MapDS:
         self.all_rooms = {}
         self.room_map = [[None for x in xrange(SCREEN_SLOTS[0])]
                                for y in xrange(SCREEN_SLOTS[1])]
+        self.all_paths = set()
 
     def get_at(self, (x, y)):
         return self.room_map[y][x]
@@ -108,7 +229,8 @@ class Main:
 
         d = pygame.display.Info()
         self.desktop_size = (d.current_w, d.current_h)
-        self.size = SCREEN_SIZE
+        self.map_gui = MapGUI()
+        self.size = map(self.map_gui.scale_coord_width, SCREEN_SLOTS)
 
         pygame.display.set_caption("Mapper")
 
@@ -120,66 +242,6 @@ class Main:
         self.last = None
 
         self.clicked = 0
-
-        self.map = MapDS()
-        self.expand_room()
-
-    def add_path(self, (x, y), dr):
-        if dr == 1:
-            self.draw_path((x, y), 0)
-        if dr == 2:
-            self.draw_path((x - 1, y), 1)
-        if dr == 4:
-            self.draw_path((x, y - 1), 0)
-        if dr == 8:
-            self.draw_path((x, y), 1)
-
-    def draw_path(self, (x, y), horiz):
-        path_color = (0xAA, ) * 3
-        px, py = (SCALE_ME(x + .5), SCALE_ME(y)) if horiz else (SCALE_ME(x), SCALE_ME(y + .5))
-        self.screen.fill(path_color, ((px, py), (SCALE, SCALE)))
-
-    def add_room(self, (x, y), (w, h)):
-        self.map.add_room((x, y), (w, h))
-        self.draw_room((x, y), (w, h))
-
-    def draw_room(self, (x, y), (w, h)):
-        drab, vibr = COLORS[(w, h)]
-        px, py = map(SCALE_ME, (x, y))
-
-        self.screen.fill(drab,
-            ((px, py), map(SCALE_WIDTH, (w, h))))
-        for vx in xrange(w):
-            for vy in xrange(h):
-                self.screen.fill(vibr, (map(SCALE_ME, (vx + x, vy + y)), (SCALE, SCALE)))
-
-    def expand_room(self):
-        next = set([(0, 0, 0)])
-        while next:
-            loc = next.pop()
-            loc, dr = loc[:2], loc[2]
-            if (not self.map.in_bounds(loc) or
-                    self.map.get_at(loc) is not None):
-                continue  # or something
-            self.add_path(loc, dr)
-            options = [(2, 3), (3, 2), (2, 2), (1, 2), (2, 1)]
-            while 1:
-                if not options:
-                    shape = (1, 1)
-                    self.add_room(loc, shape)
-                    break
-                shape = random.choice(options)
-                fit = self.map.try_fit(loc, shape)
-                if fit:
-                    self.add_room(fit, shape)
-                    room_locs = set(self.map.room_iter(fit, shape))
-                    close_locs = set(sum([map(Locection,
-                        [(dx-1, dy, 8), (dx+1, dy, 2),
-                         (dx, dy-1, 1), (dx, dy+1, 4)])
-                        for dx, dy in room_locs], []))
-                    next |= close_locs - room_locs
-                    break
-                del options[options.index(shape)]
 
     def stop(self):
         self.done = True
@@ -197,12 +259,15 @@ class Main:
                     pass
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     self.clicked = True
-                    self.last = event.pos
+                    self.map_gui.last_dir *= -1
+                    self.map_gui.dir = self.map_gui.last_dir
                 elif event.type == pygame.MOUSEBUTTONUP:
                     self.clicked = False
                 elif event.type == pygame.MOUSEMOTION:
                     pass
 
+            self.map_gui.reblit(self.screen)
+            #self.screen.blit(self.map_gui.surface, (0, 0))
             pygame.display.flip()
         pygame.quit()
 
