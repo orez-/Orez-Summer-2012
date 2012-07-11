@@ -14,6 +14,7 @@ class MenuUI(UI):
         self.options = [("Join Game", lambda: self.main.change_screen("join")),
                         ("Host Game", lambda: self.main.change_screen("host")),
                         ("Level Editor", lambda: self.main.change_screen("editor")),
+                        ("Glossary", lambda: self.main.change_screen("glossary")),
                         ("Quit", self.main.stop)]
         self.selected = 0
         self.finger = pygame.image.load("imgs/finger.png")

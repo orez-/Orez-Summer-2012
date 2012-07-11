@@ -49,15 +49,18 @@ class LoadEditorUI(UI):
             self.load_box.cur_tab ^= 1
             self.load_box.reload_files()
             self.load_box.redraw()
-        if valid_file_char(event.unicode):
+        elif valid_file_char(event.unicode):
             self.load_box.add_char(event.unicode)
-        if event.key == pygame.K_BACKSPACE:
+        elif event.key == pygame.K_BACKSPACE:
             self.load_box.del_char()
-        if event.key == pygame.K_UP:
+        elif event.key == pygame.K_ESCAPE:
+            self.dx, self.dy = (0, 0)
+            self.main.ui_back()
+        elif event.key == pygame.K_UP:
             self.load_box.up_key()
-        if event.key == pygame.K_DOWN:
+        elif event.key == pygame.K_DOWN:
             self.load_box.down_key()
-        if event.key == pygame.K_RETURN:
+        elif event.key == pygame.K_RETURN:
             filename = self.load_box.load_results.files[
                 self.load_box.load_results.selection]
             full_filename = self.load_box.tab_data[2] + "/" + filename + ".skb"

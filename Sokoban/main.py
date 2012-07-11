@@ -6,6 +6,7 @@ from ui.wait_ui import WaitUI
 from ui.editor_ui import EditorUI
 from ui.save_ui import SaveUI
 from ui.load_ui import LoadUI, LoadEditorUI
+from ui.glossary_ui import GlossaryUI
 from constants import SCREEN_SIZE
 from networking import Server, Client
 
@@ -76,8 +77,10 @@ class Main:
             self.push_ui(SaveUI)
         elif which == "test":
             self.push_ui(SinglePlayerUI)
+        elif which == "glossary":
+            self.push_ui(GlossaryUI)
         else:
-            raise ValueError("I don't know the class "+str(which))
+            raise ValueError("I don't know the class " + str(which))
 
     def send_msg(self, msg):
         self.client.send(msg)
