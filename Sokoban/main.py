@@ -114,13 +114,18 @@ class Main:
                 elif event.type == pygame.KEYUP:
                     self.ui.handle_key_up(event)
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    self.clicked = True
-                    self.ui.handle_click(event)
+                    if event.button == 1:
+                        self.clicked = True
+                        self.ui.handle_click(event)
+                    elif event.button in (4, 5):  # scrollin!
+                        event.scroll_dir = event.button * 2 - 9
+                        self.ui.handle_scroll(event)
                 elif event.type == pygame.MOUSEBUTTONUP:
-                    self.clicked = False
-                    self.ui.handle_click_up(event)
+                    if event.button == 1:
+                        self.clicked = False
+                        self.ui.handle_click_up(event)
                 elif event.type == pygame.MOUSEMOTION:
-                    if self.clicked:
+                    if event.buttons[0]:
                         self.ui.handle_drag(event)
                     else:
                         self.ui.handle_motion(event)

@@ -117,6 +117,12 @@ class GlossaryUI(UI):
         if event.key == pygame.K_ESCAPE:
             self.main.ui_back()
 
+    def handle_scroll(self, event):
+        if event.scroll_dir == -1 and self.scroll > 0:
+            self.scroll -= 1
+        elif event.scroll_dir == 1 and self.scroll <= self.max_scroll:
+            self.scroll += 1
+
 
 class AlignedImage:
     def __init__(self, img):

@@ -18,6 +18,9 @@ class UI(object):
     def handle_drag(self, event):
         self.handle_motion(event)
 
+    def handle_scroll(self, event):
+        pass
+
     def handle_motion(self, event):
         pass
 
