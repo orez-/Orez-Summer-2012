@@ -73,12 +73,12 @@ class LevelLoad(object):
                     if optional:  # more than just the coordinates and type
                         if optional[0] and optional[0][0] == '"':  # pass as string
                             optional = (','.join(optional))[1:].rstrip()
-                            item = item(board_toR, optional)
+                            item = item(board_toR, item_data[1::-1], optional)
                         else:   # these are currently the only options :|
-                            item = item(board_toR, stuff_list[int(optional[0])])
+                            item = item(board_toR, item_data[1::-1], stuff_list[int(optional[0])])
                             stuff.add_to_nums(item)
                     else:
-                        item = item(board_toR)
+                        item = item(board_toR, item_data[1::-1])
                     stuff_list.append(item)
                     stuff[(item_data[0], item_data[1])] = item
             board_toR.add_stuff(stuff)

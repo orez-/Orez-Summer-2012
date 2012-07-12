@@ -161,7 +161,8 @@ class EditorUI(UI):
                     dirty = item2.set_linked(item1)
                     self.board.stuff.update_nums(dirty)
                     self.tile_select.selected = None
-                    self.board.redraw()
+                    self.board.dirty.add((item1.pos))
+                    self.board.dirty.add((item2.pos))
                     print "Linked a", item2, "to a", item1
 
         #else:
@@ -237,12 +238,13 @@ class EditorUI(UI):
 
         if resized:
             self.board.recreate_surface()
+            self.board.full_redraw()
         return (x, y)
 
     def set_feature(self, (x, y), feature_class):
         feature = feature_class
         if feature_class.__class__ == type:  # if you're actually a class
-            feature = feature_class(self.board)  # make one of me
+            feature = feature_class(self.board, (x, y))  # make one of me
         x, y = self.resize_board(x, y)
         if self.start is not None and (x, y) == (self.start.x, self.start.y):
             self.start = None
@@ -253,14 +255,14 @@ class EditorUI(UI):
                 dirty.add(d)
             if d.linkee is not None:
                 dirty.add(d.linkee)
+            self.board.dirty |= dirty
             self.board.stuff.remove_nums(dirty)
         self.board.stuff[(y, x)] = feature
-        self.board.redraw()
+        self.board.dirty.add((x, y))
 
     def set_tile(self, (x, y), tile):
         x, y = self.resize_board(x, y)
-        self.board.data[y][x] = tile
-        self.board.redraw()
+        self.board.set_tile((x, y), tile)
 
     def set_start(self, (x, y)):
         self.start = PlayerStart(x, y, self.view)
@@ -273,7 +275,6 @@ class EditorUI(UI):
                 dirty.add(d.linkee)
             self.board.stuff.remove_nums(dirty)
             del self.board.stuff[(y, x)]
-            self.board.redraw()
 
     def get_tile(self, (x, y)):
         if x < 0 or y < 0:
@@ -325,12 +326,17 @@ class EditorUI(UI):
 class PlayerStart(TileFeature):
     img = pygame.image.load("imgs/us.png")
     def __init__(self, x, y, view):
-        self.x = x
-        self.y = y
+        self.pos = x, y
         self.view = view  # this is a reference. Do not overwrite!
 
-    def reblit(self, surf):
-        super(PlayerStart, self).reblit(surf, self.x, self.y)
+    def _set_x(self, value):
+        self.pos = (value, self.pos[1])
+
+    def _set_y(self, value):
+        self.pos = (self.pos[0], value)
+
+    x = property(lambda self: self.pos[0], _set_x)
+    y = property(lambda self: self.pos[1], _set_y)
 
     def draw(self, surf, x, y):
         surf.blit(PlayerStart.img, map(lambda (q1, q2):

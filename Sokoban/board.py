@@ -33,7 +33,7 @@ class Tile:
         return toR
 
 
-class Player:
+class Player(object):
     us_pic = pygame.image.load("imgs/us.png")
     def __init__(self, board, (x, y), me, teammate=None):
         self.x = x
@@ -90,13 +90,16 @@ class Player:
                 stepped = self.board.stuff[(newy, newx)]
                 stepped.step(self)
 
+
 class TileFeature(object):
     ID_TO_ITEM = None
     ITEM_TO_ID = None
     CAN_LINK = []
 
-    def __init__(self, board):
+    def __init__(self, board, pos=None):
+        assert(board is not None or pos is None)
         self.board = board
+        self.pos = None if pos is None else tuple(pos)
         self.linkee = None
         self.linked = None
 
@@ -112,7 +115,8 @@ class TileFeature(object):
     def deactivate(self):
         pass
 
-    def reblit(self, surf, x, y):
+    def reblit(self, surf, pos=None):
+        x, y = pos or self.pos
         self.draw(surf, x * Tile.BLOCKSIZE, y * Tile.BLOCKSIZE)
 
     def draw(self, surf, px, py):
@@ -167,17 +171,15 @@ class TileFeature(object):
 
 
 class Snorkel(TileFeature):
-    def __init__(self, board):
-        super(Snorkel, self).__init__(board)
+    def __init__(self, board, xy=None):
+        super(Snorkel, self).__init__(board, xy)
         self.img = pygame.image.load("imgs/tools.png")
 
     def step(self, stepper=None):
         if stepper is not None:
-            for (y,x), w in self.board.stuff.items():
-                if w is self:
-                    del self.board.stuff[(y, x)]
-                    self.board.redraw()
-                    break
+            x, y = self.pos
+            del self.board.stuff[(y, x)]
+            self.board.dirty.add((x, y))
             stepper.snorkel = True
 
     def draw(self, surf, x, y):
@@ -185,8 +187,8 @@ class Snorkel(TileFeature):
 
 
 class LaunchTarget(TileFeature):
-    def __init__(self, board):
-        super(LaunchTarget, self).__init__(board)
+    def __init__(self, board, xy=None):
+        super(LaunchTarget, self).__init__(board, xy)
         self.img = pygame.image.load("imgs/target.png")
         self.open = True
 
@@ -202,8 +204,8 @@ class LaunchTarget(TileFeature):
 
 class LaunchSpring(TileFeature):
     CAN_LINK = [LaunchTarget]
-    def __init__(self, board, activates=None):
-        super(LaunchSpring, self).__init__(board)
+    def __init__(self, board, xy=None, activates=None):
+        super(LaunchSpring, self).__init__(board, xy)
         self.img = pygame.image.load("imgs/spring.png")
         self.launch_me = None
         if activates is not None:
@@ -219,40 +221,41 @@ class LaunchSpring(TileFeature):
         self.launch_me = None
 
     def activate(self):
-        if self.launch_me is not None and self.linked.open:
-            tx, ty = 0, 0
-            for (y, x), v in self.board.stuff.items():
-                if v is self.linked:
-                    tx, ty = x, y
-                    break
-            if self.launch_me == Tile.BLOCK:
-                for (y, x), v in self.board.stuff.items():
-                    if v is self:
-                        self.board.data[y][x] = Tile.OPEN
-                        break
-                self.board.data[ty][tx] = Tile.BLOCK
+        if self.launch_me is not None and self.linked.open:  # gonna launch something
+            tx, ty = self.linked.pos
+            if self.launch_me == Tile.BLOCK:  # launching a block
+                x, y = self.pos
+                self.board.set_tile((x, y), Tile.OPEN)
+                self.board.set_tile((tx, ty), Tile.BLOCK)
             elif self.launch_me is not None:
                 self.launch_me.x, self.launch_me.y = tx, ty
             self.linked.step()
             self.launch_me = None
-            self.board.redraw()
 
     def draw(self, surf, x, y):
         surf.blit(self.img, (x, y))
 
 
 class Beartrap(TileFeature):
-    def __init__(self, board):
-        super(Beartrap, self).__init__(board)
-        self.active = True
+    def __init__(self, board, xy=None):
+        super(Beartrap, self).__init__(board, xy)
+        self._active = True
+
+    def _set_active(self, value):
+        if value != self._active:
+            self._active = value
+            if self.pos:
+                self.board.dirty.add(self.pos)
+            else:
+                print "no board"
+
+    active = property(lambda self: self._active, _set_active)
 
     def activate(self):
         self.active = False
-        self.board.redraw()
 
     def deactivate(self):
         self.active = True
-        self.board.redraw()
 
     def draw(self, surf, x, y):
         color = (128, 80, 0)
@@ -263,8 +266,8 @@ class Beartrap(TileFeature):
 
 class Button(TileFeature):
     CAN_LINK = [Beartrap, LaunchSpring]
-    def __init__(self, board, activates=None):
-        super(Button, self).__init__(board)
+    def __init__(self, board, xy=None, activates=None):
+        super(Button, self).__init__(board, xy)
         if activates is not None:
             self.set_linked(activates)
 
@@ -283,12 +286,9 @@ class Button(TileFeature):
 
 class Walltrap(TileFeature):
     def step(self, stepper=None):
-        for (y,x), w in self.board.stuff.items():
-            if w is self:
-                del self.board.stuff[(y,x)]
-                self.board.data[y][x] = Tile.WALL
-                break
-        self.board.redraw()
+        x, y = self.pos
+        del self.board.stuff[(y, x)]
+        self.board.set_tile((x, y), Tile.WALL)
 
     def draw(self, surf, x, y):
         color = (0x66, ) * 3
@@ -309,8 +309,8 @@ class Timetrap(TileFeature):
 
 
 class Helptrap(TileFeature):
-    def __init__(self, board, text="--default--"):
-        super(Helptrap, self).__init__(board)
+    def __init__(self, board, xy=None, text="--default--"):
+        super(Helptrap, self).__init__(board, xy)
         self.text = str(text)
 
     def step(self, stepper=None):
@@ -333,10 +333,10 @@ class TileFeatureDict:
         self.nums = []  # buttons
         if isinstance(stuff, TileFeatureDict):
             self.show_numbers = stuff.show_numbers
-            self.stuff = stuff.stuff
+            self.stuff = {k: v for k, v in stuff.items()}
             self.xoff = stuff.xoff
             self.yoff = stuff.yoff
-            self.nums = stuff.nums
+            self.nums = stuff.nums[:]
         else:
             self.stuff = stuff
             self.xoff = xoff
@@ -345,7 +345,9 @@ class TileFeatureDict:
     def normalize(self):
         stuff = {}  # let's not do it in-place to avoid stepping on any toes
         for (y, x), v in self.stuff.items():
-            stuff[self.translate((y, x))] = v
+            y, x = self.translate((y, x))
+            stuff[(y, x)] = v
+            v.pos = (x, y)
         self.stuff = stuff
         self.xoff = 0
         self.yoff = 0
@@ -372,19 +374,22 @@ class TileFeatureDict:
         else:
             self.nums.append(thing)
 
+    def reblit_item(self, surf, (x, y), v):
+        v.reblit(surf, reversed(self.translate((y, x))))
+        if self.show_numbers:
+            if v.linked and (v in self.nums):
+                i = self.nums.index(v)
+                surf.blit(self.font.render(str(i), True, (0x41, 0x69, 0xE1)),
+                    map(lambda q: q * Tile.BLOCKSIZE, (x + self.xoff, y + self.yoff)))
+            if v.linkee and (v.linkee in self.nums):
+                i = self.nums.index(v.linkee)
+                surf.blit(self.font.render(str(i), True, (0x41, 0x69, 0xE1)),
+                    (Tile.BLOCKSIZE * (x + self.xoff), 
+                     Tile.BLOCKSIZE * (y + self.yoff) + 35))
+
     def reblit(self, surf):
         for (y, x), v in self.stuff.items():
-            v.reblit(surf, x + self.xoff, y + self.yoff)
-            if self.show_numbers:
-                if v.linked and (v in self.nums):
-                    i = self.nums.index(v)
-                    surf.blit(self.font.render(str(i), True, (0x41, 0x69, 0xE1)),
-                        map(lambda q: q * Tile.BLOCKSIZE, (x + self.xoff, y + self.yoff)))
-                if v.linkee and (v.linkee in self.nums):
-                    i = self.nums.index(v.linkee)
-                    surf.blit(self.font.render(str(i), True, (0x41, 0x69, 0xE1)),
-                        (Tile.BLOCKSIZE * (x + self.xoff), 
-                         Tile.BLOCKSIZE * (y + self.yoff) + 35))
+            self.reblit_item(surf, (x, y), v)
 
     def translate(self, (y, x)):
         return (self.yoff + y, self.xoff + x)
@@ -413,15 +418,17 @@ class TileFeatureDict:
         return [(self.translate((y, x)), v)
                 for (y, x), v in self.stuff.items()]
 
+
 class Board:
     def __init__(self, tiles=None):
         self.data = tiles
 
-        self.bg = pygame.Surface(SCREEN_SIZE)
+        self.bg = pygame.Surface(SCREEN_SIZE)   # Background of walls
         for x in xrange(SCREEN_RADIUS * 2 + 1):
             for y in xrange(SCREEN_RADIUS * 2 + 1):
                 Tile.draw_tile(Tile.WALL, self.bg, (x, y))
 
+        self.dirty = set()
         self.recreate_surface()
 
     def add_stuff(self, stuff={}):
@@ -429,10 +436,14 @@ class Board:
         for (y, x), obj in self.stuff.items():
             if isinstance(obj, Button) and self.data[y][x] == Tile.BLOCK:
                 obj.step()
-        self.redraw()
+        self.full_redraw()
 
     def add_client(self, client):
         self.client = client
+
+    def set_tile(self, (x, y), tile):
+        self.dirty.add((x, y))
+        self.data[y][x] = tile
 
     def recreate_surface(self):
         width = len(self.data[0])
@@ -501,7 +512,7 @@ class Board:
         self.data = map(list, self.data)  # zip makes tuples: unacceptable
         self.stuff.normalize()
         self.recreate_surface()
-        self.redraw()
+        self.full_redraw()
         return xcut - 1, ycut - 1
 
     def wall_wrap(self):
@@ -557,49 +568,61 @@ class Board:
         bx, by = who.x - dx, who.y - dy
         if self.data[by][bx] == Tile.BLOCK:
             if self.data[who.y][who.x] != Tile.GRAVEL:
-                self.data[by][bx] = Tile.OPEN
-                self.data[who.y][who.x] = Tile.BLOCK
+                self.set_tile((bx, by), Tile.OPEN)
+                self.set_tile((who.x, who.y), Tile.BLOCK)
                 if (by, bx) in self.stuff:
                     self.stuff[(by, bx)].unstep()
-                self.redraw()
         return True
 
     def push_block(self, who, (dx, dy)):
         """ Assumes you're moving into a block (that is, not called frivolously)"""
         x, y = who.x + dx, who.y + dy
         if (y, x) in self.stuff:
-            if isinstance(self.stuff[(y,x)], Beartrap) and self.stuff[(y,x)].active:
+            if isinstance(self.stuff[(y, x)], Beartrap) and self.stuff[(y, x)].active:
                 return False
-        if (y+dy, x+dx) in self.stuff:
-            if isinstance(self.stuff[(y+dy, x+dx)], Walltrap):
+        if (y + dy, x + dx) in self.stuff:
+            if isinstance(self.stuff[(y + dy, x + dx)], Walltrap):
                 return False
-        if self.data[y+dy][x+dx] == Tile.OPEN:
-            if (who.teammate.x, who.teammate.y) == (x+dx, y+dy):
+        if self.data[y + dy][x + dx] == Tile.OPEN:
+            if (who.teammate.x, who.teammate.y) == (x + dx, y + dy):
                 return False    # teammate in the way of the block
-            self.data[y+dy][x+dx] = Tile.BLOCK
-            self.data[y][x] = Tile.OPEN
-            if (y+dy,x+dx) in self.stuff:
-                self.stuff[(y+dy,x+dx)].step()
-            self.redraw()
+            self.set_tile((x + dx, y + dy), Tile.BLOCK)
+            self.set_tile((x, y), Tile.OPEN)
+            if (y + dy, x + dx) in self.stuff:
+                self.stuff[(y + dy, x + dx)].step()
             return True
-        if self.data[y+dy][x+dx] == Tile.WATER:
-            if (who.teammate.x, who.teammate.y) == (x+dx, y+dy):
+        if self.data[y + dy][x + dx] == Tile.WATER:
+            if (who.teammate.x, who.teammate.y) == (x + dx, y + dy):
                 return False    # teammate in the way (snorkel logic!)
-            self.data[y+dy][x+dx] = Tile.OPEN   # maybe dirt someday
-            self.data[y][x] = Tile.OPEN
-            self.redraw()
+            self.set_tile((x + dx, y + dy), Tile.OPEN)  # maybe dirt someday
+            self.set_tile((x, y), Tile.OPEN)
             return True
         return False
 
-    def redraw(self):
+    def full_redraw(self):
         for y, row in enumerate(self.data):
             for x, elem in enumerate(row):
                 Tile.draw_tile(elem, self.surface, (x, y))
 
         self.stuff.reblit(self.surface)
-        #for (y,x), v in self.stuff.items():
-        #    v.reblit(self.surface, x, y)
+
+    def redraw(self):
+        if self.dirty:
+            for x, y in self.dirty:
+                Tile.draw_tile(self.data[y][x], self.surface, (x, y))
+                if (y, x) in self.stuff:
+                    self.stuff.reblit_item(self.surface,
+                            (x - self.stuff.xoff, y - self.stuff.yoff),
+                            self.stuff[(y, x)])
+            self.dirty.clear()
 
     def reblit(self, surface, center):
+        self.redraw()
         surface.blit(self.bg, (0, 0))
         surface.blit(self.surface, map(lambda x: (SCREEN_RADIUS - x) * Tile.BLOCKSIZE, center))
+
+    def clone(self):
+        toR = Board([x[:] for x in self.data])
+        # need to clone better.
+        toR.add_stuff(self.stuff)
+        return toR
