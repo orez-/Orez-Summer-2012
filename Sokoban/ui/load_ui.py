@@ -66,9 +66,9 @@ class LoadEditorUI(UI):
             full_filename = self.load_box.tab_data[2] + "/" + filename + ".skb"
             start, board = LevelLoad.load(full_filename)
             board.stuff.show_numbers = True
-            board.redraw()
             self.parent.set_start(start)
             self.parent.board = board
+            self.parent.board.full_redraw()
             self.parent.view[:] = start
             self.dx, self.dy = (0, 0)
             self.main.ui_back()

@@ -326,7 +326,7 @@ class Helptrap(TileFeature):
         surf.blit(pygame.font.Font(None, 40).render("?", True, (0, ) * 3), (x + 16, y + 12))
 
 
-class TileFeatureDict:
+class TileFeatureDict(object):
     def __init__(self, stuff={}, (xoff, yoff)=(0, 0)):
         self.show_numbers = False
         self.font = pygame.font.Font(None, 24)
@@ -338,7 +338,7 @@ class TileFeatureDict:
             self.yoff = stuff.yoff
             self.nums = stuff.nums[:]
         else:
-            self.stuff = stuff
+            self.stuff = {k:v for k, v in stuff.iteritems()}
             self.xoff = xoff
             self.yoff = yoff
 
@@ -417,6 +417,26 @@ class TileFeatureDict:
     def items(self):
         return [(self.translate((y, x)), v)
                 for (y, x), v in self.stuff.items()]
+
+    def __str__(self):
+        count = {}
+        for v in self.stuff.itervalues():
+            v = v.__class__.__name__
+            if v not in count:
+                count[v] = 0
+            count[v] += 1
+        toR = ', '.join([str(v) + " " + k + "s" for k, v in count.items()])
+        toR += " (" + ("N" if self.show_numbers else "No n") + "umbers shown, "
+        toR += "roughly " + str(len(self.nums)) + " connections"
+        if not (self.xoff == self.yoff == 0):
+            toR += ", offset:" + str(tuple(map(str, (self.xoff, self.yoff))))
+        return toR + ")"
+
+    def clear(self):
+        self.nums = []
+        self.stuff = {}
+        self.xoff, self.yoff = 0, 0
+        # you probably want a full redraw after this
 
 
 class Board:
