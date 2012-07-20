@@ -438,6 +438,22 @@ class TileFeatureDict(object):
         self.xoff, self.yoff = 0, 0
         # you probably want a full redraw after this
 
+    def clone(self, board):
+        toR = {}  # my new data
+        updater = {}  # old_items -> new_items
+        for (y, x), v in self.items():
+            toR[(y, x)] = v.__class__(board, (x, y))  # make a new one
+            toR[(y, x)].__dict__.update(v.__dict__)  # make it identical
+            toR[(y, x)].board = board  # it needs the new board
+            updater[v] = toR[(y, x)]  # and the updater needs to bookkeep
+        for v in toR.itervalues():
+            if v.linked is not None:  # update all the linkeds
+                updater[v.linked].linkee = v
+                v.linked = updater[v.linked]
+        tfd = TileFeatureDict(toR)
+        tfd.show_numbers = True
+        return tfd
+
 
 class Board:
     def __init__(self, tiles=None):
@@ -643,6 +659,5 @@ class Board:
 
     def clone(self):
         toR = Board([x[:] for x in self.data])
-        # need to clone better.
-        toR.add_stuff(self.stuff)
+        toR.add_stuff(self.stuff.clone(toR))
         return toR

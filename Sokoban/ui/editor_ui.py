@@ -147,8 +147,11 @@ class EditorUI(UI):
                     return
                 item1 = self.board.stuff[(y, x)]
                 if self.tile_select.selected[1] is None:  # haven't connected
+#                    xo, yo = self.board.stuff.xoff, self.board.stuff.yoff
+#                    item1.pos = (x, y)
+#                    print "ba", item1.pos
                     self.tile_select.selected[1] = item1
-                    print "Connected to a", item1
+#                    print "Connected to a", item1
                 else:   # one connection in place
                     item2 = self.tile_select.selected[1]
                     if item2.__class__ in item1.CAN_LINK:
@@ -161,8 +164,12 @@ class EditorUI(UI):
                     dirty = item2.set_linked(item1)
                     self.board.stuff.update_nums(dirty)
                     self.tile_select.selected = None
-                    self.board.dirty.add((item1.pos))
-                    self.board.dirty.add((item2.pos))
+#                    xo, yo = self.board.stuff.xoff, self.board.stuff.yoff
+#                    self.board.dirty.add((item1.pos[0] + xo, item1.pos[1] + yo))
+#                    self.board.dirty.add((item2.pos[0] + xo, item2.pos[1] + yo))
+#                    print "ab", self.board.dirty
+                    self.board.full_redraw()
+
                     print "Linked a", item2, "to a", item1
 
         #else:
