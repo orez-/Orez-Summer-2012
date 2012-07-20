@@ -262,10 +262,10 @@ class EditorUI(UI):
                 dirty.add(d)
             if d.linkee is not None:
                 dirty.add(d.linkee)
-            self.board.dirty |= dirty
             self.board.stuff.remove_nums(dirty)
         self.board.stuff[(y, x)] = feature
-        self.board.dirty.add((x, y))
+        self.board.full_redraw()
+        #self.board.dirty.add((x, y))
 
     def set_tile(self, (x, y), tile):
         x, y = self.resize_board(x, y)
@@ -282,6 +282,7 @@ class EditorUI(UI):
                 dirty.add(d.linkee)
             self.board.stuff.remove_nums(dirty)
             del self.board.stuff[(y, x)]
+            self.board.full_redraw()
 
     def get_tile(self, (x, y)):
         if x < 0 or y < 0:

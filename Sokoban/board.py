@@ -115,6 +115,12 @@ class TileFeature(object):
     def deactivate(self):
         pass
 
+    def on_linked(self):
+        pass
+
+    def on_linkee(self):
+        pass
+
     def reblit(self, surf, pos=None):
         x, y = pos or self.pos
         self.draw(surf, x * Tile.BLOCKSIZE, y * Tile.BLOCKSIZE)
@@ -127,11 +133,15 @@ class TileFeature(object):
         if self.linked is not None:  # if the button has a beartrap
             #dirty.add(self.linked)
             self.linked.linkee = None  # the old beartrap has no button
+            self.linked.on_linkee()
         self.linked = linked  # the button has a new beartrap
         if linked.linkee is not None:  # if the new beartrap has a button
             dirty.add(linked.linkee)
             linked.linkee.linked = None  # the new beartrap's old button has no beartrap
+            linked.linkee.on_linked()
         linked.linkee = self  # the new beartrap's button is me!
+        self.on_linked()
+        linked.on_linkee()
         return dirty
 
     @staticmethod
@@ -268,8 +278,18 @@ class Button(TileFeature):
     CAN_LINK = [Beartrap, LaunchSpring]
     def __init__(self, board, xy=None, activates=None):
         super(Button, self).__init__(board, xy)
+        self.color = (0xCC, ) * 3
         if activates is not None:
             self.set_linked(activates)
+
+    def set_color(self, connector):
+        colors = {Beartrap: (128, 80, 0),
+                  LaunchSpring: (255, 247, 0),
+                  None: (0xCC, 0xCC, 0xCC)
+                 }
+        if connector not in colors:
+            connector = connector.__class__
+        self.color = colors[connector]
 
     def step(self, stepper=None):
         if self.linked is not None:
@@ -279,9 +299,14 @@ class Button(TileFeature):
         if self.linked is not None:
             self.linked.deactivate()
 
+    def on_linked(self):
+        self.set_color(self.linked)
+
     def draw(self, surf, x, y):
-        pygame.draw.circle(surf, (128, 80, 0),
+        pygame.draw.circle(surf, self.color,
             map(lambda q: q + Tile.BLOCKSIZE/2, (x, y)), 5)
+        pygame.draw.circle(surf, (0, ) * 3,
+            map(lambda q: q + Tile.BLOCKSIZE/2, (x, y)), 5, 1)
 
 
 class Walltrap(TileFeature):
