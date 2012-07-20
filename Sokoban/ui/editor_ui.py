@@ -296,6 +296,8 @@ class EditorUI(UI):
         self.view[1] += y
         if self.select_rect is not None:
             self.select_rect[0] = map(sum, zip(self.select_rect[0], (-x, -y)))
+            if not self.main.clicked:
+                self.select_rect[1] = map(sum, zip(self.select_rect[1], (-x, -y)))
             self.redraw_highlight()
 
     def handle_key(self, event):
