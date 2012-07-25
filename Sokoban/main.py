@@ -7,6 +7,7 @@ from ui.editor_ui import EditorUI
 from ui.save_ui import SaveUI
 from ui.load_ui import LoadUI, LoadEditorUI
 from ui.glossary_ui import GlossaryUI
+from ui.join_ui import JoinUI
 from constants import SCREEN_SIZE
 from networking import Server, Client
 
@@ -62,9 +63,12 @@ class Main:
             self.push_ui(WaitUI, False)
             self.join_server()
         elif which == "join":
-            #self.push_ui(LoadUI)
+            self.push_ui(JoinUI)
+        elif which == "join ip":
+            ip = self.ui.ip_box.text
+            self.ui_back()
             self.push_ui(WaitUI, True)
-            self.join_server()
+            self.join_server(ip)
         elif which == "editor load":
             self.push_ui(LoadEditorUI)
         elif which == "level select":  # before a game
@@ -85,8 +89,8 @@ class Main:
     def send_msg(self, msg):
         self.client.send(msg)
 
-    def join_server(self):
-        self.client = Client(self)
+    def join_server(self, host=None):
+        self.client = Client(self, host)
         self.client.start()
 
     def stop_multiplayer(self):

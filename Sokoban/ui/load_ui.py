@@ -60,7 +60,7 @@ class LoadEditorUI(UI):
             self.load_box.up_key()
         elif event.key == pygame.K_DOWN:
             self.load_box.down_key()
-        elif event.key == pygame.K_RETURN:
+        elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
             filename = self.load_box.load_results.files[
                 self.load_box.load_results.selection]
             full_filename = self.load_box.tab_data[2] + "/" + filename + ".skb"
@@ -114,7 +114,7 @@ class LoadUI(UI):
             self.load_box.up_key()
         elif event.key == pygame.K_DOWN:
             self.load_box.down_key()
-        elif event.key == pygame.K_RETURN:
+        elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
             filename = self.load_box.load_results.files[
                 self.load_box.load_results.selection]
             dec_filename = "maps/" + filename + ".skb"

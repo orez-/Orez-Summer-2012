@@ -131,9 +131,8 @@ class Client(threading.Thread):
     def __init__(self, main, host=None):
         self.main = main
         if host is None:
-            self.ADDR=(HOST, PORT)
-        else:
-            self.ADDR=(host, PORT)
+            host = HOST
+        self.ADDR = (host, PORT)
         threading.Thread.__init__(self)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         #self.msgs = Queue()
