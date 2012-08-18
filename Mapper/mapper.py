@@ -1,6 +1,7 @@
 import pygame
 
 from ui.map_ui import MapUI
+from ui.overworld_ui import OverworldUI
 
 
 class Main:
@@ -9,19 +10,26 @@ class Main:
 
         d = pygame.display.Info()
         self.desktop_size = (d.current_w, d.current_h)
-        self.ui = MapUI()
-        self.size = self.ui.screen_size()
+        self.ui = OverworldUI(self, None)
+        self.size = (600, 450)  # self.ui.screen_size()
 
         pygame.display.set_caption("Mapper")
 
         self.done = False
         self.clock = pygame.time.Clock()
+        self.keys = set()
 
         self.screen = pygame.display.set_mode(self.size)
         self.screen.fill((0xFF, ) * 3)
         self.last = None
 
         self.clicked = 0
+
+    def ui_push(self, cls):
+        self.ui = cls(self, self.ui)
+
+    def ui_pop(self):
+        self.ui = self.ui.parent
 
     def stop(self):
         self.done = True
@@ -33,8 +41,10 @@ class Main:
                 if event.type == pygame.QUIT:
                     self.stop()
                 elif event.type == pygame.KEYDOWN:
+                    self.keys.add(event.key)
                     self.ui.handle_key(event)
                 elif event.type == pygame.KEYUP:
+                    self.keys.discard(event.key)
                     self.ui.handle_key_up(event)
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:
@@ -54,6 +64,7 @@ class Main:
                         self.ui.handle_motion(event)
 
             self.screen.fill((0, ) * 3)
+            self.ui.update()
             self.ui.reblit(self.screen, self.clock.get_time())
             pygame.display.flip()
         pygame.quit()

@@ -16,7 +16,9 @@ COLORS = {(2, 3): ((234, 153, 217), (232, 0, 162)),
 
 class MapUI(ui.UI):
     FRAMES = 10
-    def __init__(self):
+
+    def __init__(self, main, parent):
+        super(MapUI, self).__init__(main, parent)
         self.spacing = 1
         self.surface = pygame.Surface(map(self.scale_coord_width, SCREEN_SLOTS))
         self.surface.fill((0xFF, ) * 3)
@@ -140,7 +142,7 @@ class MapUI(ui.UI):
                     for loc in room_locs:  # close_locs -= room_locs
                         close_locs.pop(loc, None)
 
-                    next.update(close_locs)  # 
+                    next.update(close_locs)
                     break
                 del options[options.index(shape)]
 
@@ -150,6 +152,10 @@ class MapUI(ui.UI):
     def handle_click(self, event):
         self.last_dir *= -1
         self.dir = self.last_dir
+
+    def handle_key(self, event):
+        if event.key == pygame.K_ESCAPE:
+            self.main.ui_pop()
 
 
 class MapDS:
