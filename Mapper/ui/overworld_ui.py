@@ -13,7 +13,9 @@ class OverworldUI(ui.UI):
         super(OverworldUI, self).__init__(main, parent)
         #self.surface = pygame.Surface(SCREEN_SIZE)
         self.slime = SlimeAI((0, 0))
-        self.terrain = Grasslands()
+        size = (1, 1)
+        #size = main.map.all_rooms[main.map.get_at((0, 0))][1]
+        self.terrain = set([Grasslands(size)])
         self.redraw()
 
     def redraw(self):
@@ -23,7 +25,8 @@ class OverworldUI(ui.UI):
     def reblit(self, surf, time_passed):
         super(OverworldUI, self).reblit(surf, time_passed)
         center = self.slime.centerx - 300, self.slime.centery - 225
-        self.terrain.reblit(surf, center)
+        for t in self.terrain:
+            t.reblit(surf, center)
         self.slime.reblit(surf, time_passed, center)
 
     def handle_key(self, event):

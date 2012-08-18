@@ -25,7 +25,7 @@ class MapUI(ui.UI):
 
         self.size = map(self.scale_coord_width, SCREEN_SLOTS)
 
-        self.map = MapDS()
+        self.map = main.map  # MapDS()
         self.expand_room()
         self.preload_expansion()
 
@@ -112,37 +112,37 @@ class MapUI(ui.UI):
         surf.blit(self.animation_surfs[self.frame], (0, 0))
 
     def expand_room(self):
-        next = {(0, 0): 0}
+        next = {(0, 0): 0}  # coordinate location cannot overlap: direction irrelevant
         while next:
-            loc, dr = next.popitem()
+            loc, dr = next.popitem()  # get a random location and direction for a path
             if (not self.map.in_bounds(loc) or
-                    self.map.get_at(loc) is not None):
+                    self.map.get_at(loc) is not None):  # this one isn't valid.
                 continue  # or something
             self.add_path(loc, dr)
-            options = [(2, 3), (3, 2), (2, 2), (1, 2), (2, 1)]
+            options = [(2, 3), (3, 2), (2, 2), (1, 2), (2, 1)]  # all different room sizes
             while 1:
-                if not options:
-                    shape = (1, 1)
+                if not options:  # nothing fit...
+                    shape = (1, 1)  # only then can you fill the area
                     self.add_room(loc, shape)
                     break
-                shape = random.choice(options)
-                fit = self.map.try_fit(loc, shape)
-                if fit:
+                shape = random.choice(options)  # pick a random shape
+                fit = self.map.try_fit(loc, shape)  # see if it can fit in that area
+                if fit:  # also selects a valid configuration for you.
                     self.add_room(fit, shape)
-                    room_locs = set(self.map.room_iter(fit, shape))
+                    room_locs = set(self.map.room_iter(fit, shape))  # get each location on the new room
 
                     dictlist = ({(dx - 1, dy): 8, (dx + 1, dy): 2,
                                  (dx, dy - 1): 1, (dx, dy + 1): 4}
-                                 for dx, dy in room_locs)
+                                 for dx, dy in room_locs)  # get every direction off of these points (for a path)
 
                     close_locs = {}
                     for d in dictlist:
-                        close_locs.update(d)
+                        close_locs.update(d)  # combine each direction into one dic
 
                     for loc in room_locs:  # close_locs -= room_locs
-                        close_locs.pop(loc, None)
+                        close_locs.pop(loc, None)  # remove yourself from the adjacency
 
-                    next.update(close_locs)
+                    next.update(close_locs)  # everything that remains is fair game as a path
                     break
                 del options[options.index(shape)]
 
@@ -160,9 +160,9 @@ class MapUI(ui.UI):
 
 class MapDS:
     def __init__(self):
-        self.all_rooms = {}
+        self.all_rooms = {}  # room_object -> ((x, y), (w, h))
         self.room_map = [[None for x in xrange(SCREEN_SLOTS[0])]
-                               for y in xrange(SCREEN_SLOTS[1])]
+                               for y in xrange(SCREEN_SLOTS[1])]  # 2d list maps coordinates to room_objects
         self.all_paths = set()
 
     def get_at(self, (x, y)):

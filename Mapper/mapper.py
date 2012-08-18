@@ -1,6 +1,6 @@
 import pygame
 
-from ui.map_ui import MapUI
+from ui.map_ui import MapUI, MapDS
 from ui.overworld_ui import OverworldUI
 
 
@@ -10,7 +10,6 @@ class Main:
 
         d = pygame.display.Info()
         self.desktop_size = (d.current_w, d.current_h)
-        self.ui = OverworldUI(self, None)
         self.size = (600, 450)  # self.ui.screen_size()
 
         pygame.display.set_caption("Mapper")
@@ -19,11 +18,13 @@ class Main:
         self.clock = pygame.time.Clock()
         self.keys = set()
 
+        self.map = MapDS()
         self.screen = pygame.display.set_mode(self.size)
         self.screen.fill((0xFF, ) * 3)
         self.last = None
 
         self.clicked = 0
+        self.ui = OverworldUI(self, None)
 
     def ui_push(self, cls):
         self.ui = cls(self, self.ui)

@@ -30,6 +30,9 @@ class UI(object):
     def on_reentry(self, child):
         pass
 
+    def update(self):
+        pass
+
     def print_ui_stack(self):
         x = self
         while x:
