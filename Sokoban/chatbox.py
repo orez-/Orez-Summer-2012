@@ -16,6 +16,7 @@ CHAT_Y = INPUT_Y - CHAT_HEIGHT - CHAT_EDGE
 
 CHAT_LINGER = 3
 
+
 class Inputbox:
     def __init__(self):
         self.bg_surface = pygame.Surface((CHAT_WIDTH, CHAT_FONT_HEIGHT + CHAT_EDGE))
@@ -31,15 +32,16 @@ class Inputbox:
         self.text_surface.fill((0, ) * 4)
         words = CHAT_FONT.render(self.text, True, (0xFF, ) * 3)
         self.text_surface.blit(words, (0, 0),
-            ((max(words.get_width() - (CHAT_WIDTH - CHAT_EDGE), 0), 0), 
+            ((max(words.get_width() - (CHAT_WIDTH - CHAT_EDGE), 0), 0),
              (CHAT_WIDTH, CHAT_FONT_HEIGHT)))
 
     def submit(self, client):
         if self.text:
             self.text = self.text.replace(RS, "")   # strip bad characters
-            client.send("MSG "+self.text)
+            client.send("MSG " + self.text)
             self.text = ""
             self.redraw()
+
 
 class Chatbox:
     def __init__(self):
@@ -60,9 +62,10 @@ class Chatbox:
             if self.hide_time is not True and self.hide_time < time.time():
                 self.hide_time = None
             surf.blit(self.bg_surface, (CHAT_EDGE, CHAT_Y))
-            surf.blit(self.text_surface, (CHAT_EDGE/2, CHAT_Y + CHAT_EDGE/2),
+            surf.blit(self.text_surface,
+                (CHAT_EDGE / 2, CHAT_Y + CHAT_EDGE / 2),
                 ((0, CHAT_BUFFER - CHAT_HEIGHT + CHAT_EDGE),
-                 (CHAT_WIDTH, CHAT_HEIGHT - CHAT_EDGE/2)))
+                 (CHAT_WIDTH, CHAT_HEIGHT - CHAT_EDGE / 2)))
             if self.hide_time is True:
                 self.input_box.reblit(surf)
 
@@ -83,8 +86,8 @@ class Chatbox:
             wid = 0
             while US in x:  # different colors
                 loc = x.find(US)
-                next_color = COLORS[int(x[loc+1:loc+3], 16)]
-                text, x = x[:loc], x[loc+3:]
+                next_color = COLORS[int(x[loc + 1: loc + 3], 16)]
+                text, x = x[:loc], x[loc + 3:]
 
                 text = CHAT_FONT.render(text, True, color)
                 self.text_surface.blit(text,
@@ -114,36 +117,36 @@ class Chatbox:
             while US in msg[0][last_index:]:  # different colors
                 loc = msg[0].find(US, last_index)
                 last_index = loc + 1
-                raw_num = msg[0][loc+1:loc+3]
+                raw_num = msg[0][loc + 1: loc + 3]
                 try:
                     if len(raw_num) != 2:
-                        int("crash")  # force a ValueError (the best code)
+                        raise ValueError
                     num = int(raw_num, 16)  # hex num
                 except ValueError:  # not valid input
-                    msg[0] = msg[0][:loc] + msg[0][loc+1:]  # strip the US
+                    msg[0] = msg[0][:loc] + msg[0][loc + 1:]  # strip the US
                     last_index -= 1  # what if some idiot did USUS03
                                      # (or worse USUSbad)
-            colorless = re.sub(US+r"\d\d", "", msg[0])
+            colorless = re.sub(US + r"\d\d", "", msg[0])
             word_width = CHAT_FONT.size(colorless)[0]
-            if word_width+wid > screenwid:  # nextline
+            if word_width + wid > screenwid:  # nextline
                 wid = 0
                 toR += [line]
                 line = ""
                 if word_width > screenwid:  # nextline too long!?
                     for i, c in enumerate(msg[0]):  # go character by character
                         if c == US:
-                            line += msg[0][i:i+3]
+                            line += msg[0][i: i + 3]
                             continue
-                        if CHAT_FONT.size(re.sub(US+r"\d\d", "", line) + c)[0] > screenwid:
+                        if CHAT_FONT.size(re.sub(US + r"\d\d", "", line) + c)[0] > screenwid:
                             toR += [line]
                             line = ""
                         line += c
                     line += " "
-                    wid += CHAT_FONT.size(re.sub(US+r"\d\d", "", line+" "))[0]
+                    wid += CHAT_FONT.size(re.sub(US + r"\d\d", "", line + " "))[0]
                     msg = msg[1:]
                     continue
-            wid += CHAT_FONT.size(colorless+" ")[0]
-            line += msg[0]+" "
+            wid += CHAT_FONT.size(colorless + " ")[0]
+            line += msg[0] + " "
             msg = msg[1:]
         toR += [line]
         return toR

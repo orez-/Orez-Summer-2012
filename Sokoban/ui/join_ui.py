@@ -8,6 +8,7 @@ PADDING = 8
 BG_COLOR = (200, 191, 231)
 BG_HILITE = (167, 152, 216)
 
+
 class JoinUI(UI):
     STD_MODE = 0
     SAVE_MODE = 1
@@ -33,7 +34,8 @@ class JoinUI(UI):
             ])
         self.base_buttons.bottom = SCREEN_SIZE[1]
 
-        self.to_reblit = set([self.ip_box, self.type_buttons, self.base_buttons])
+        self.to_reblit = set([
+            self.ip_box, self.type_buttons, self.base_buttons])
         self._mode = JoinUI.STD_MODE
         self.redraw()
 
@@ -67,11 +69,12 @@ class JoinUI(UI):
     def redraw(self):
         self.surface.fill((0xFF, ) * 3)
         self.surface.fill((200, 191, 231), ((0, 0), (550, 80)))
-        self.surface.blit(DESCFONT.render("Host Address", True, (0, ) * 3), (PADDING, PADDING))
+        self.surface.blit(DESCFONT.render("Host Address", True, (0, ) * 3),
+            (PADDING, PADDING))
 
         if self.mode == JoinUI.SAVE_MODE:
-            self.surface.blit(DESCFONT.render("Host's Name", True, (0, ) * 3), (PADDING, PADDING + 30 + PADDING))
-
+            self.surface.blit(DESCFONT.render("Host's Name", True, (0, ) * 3),
+                (PADDING, PADDING + 30 + PADDING))
 
         #self.surface.fill((0, ) * 3, ((400, 400), (100, 100)))
 
@@ -116,7 +119,8 @@ class JoinUI(UI):
 
 
 class ButtonRow(object):
-    def __init__(self, name_actions, (x, y)=(0, 0), width=SCREEN_SIZE[0], font_height=30):
+    def __init__(self, name_actions, (x, y)=(0, 0),
+            width=SCREEN_SIZE[0], font_height=30):
         self.padding = 10
         self.bg_color = BG_COLOR
         self.bg_hilite = BG_HILITE
@@ -162,11 +166,13 @@ class ButtonRow(object):
     def redraw(self):
         self.surface.fill(self.bg_color)
         if self.selected is not None:
-            self.surface.fill(self.bg_hilite, ((self.selected * self.step, 0), (self.step, self.surface.get_height())))
+            self.surface.fill(self.bg_hilite, ((self.selected * self.step, 0),
+                (self.step, self.surface.get_height())))
         for i, (name, _) in enumerate(self.name_actions):
             text = self.font.render(name, True, (0, ) * 3)
             offset = text.get_width() // 2
-            self.surface.blit(text, (i * self.step + self.hstep - offset, self.padding))
+            self.surface.blit(text,
+                (i * self.step + self.hstep - offset, self.padding))
 
     def reblit(self, surf):
         surf.blit(self.surface, self.pos)
@@ -189,7 +195,8 @@ class Textbox(object):
         self.padding = 3
         self.text = ""
         self.font = pygame.font.Font(None, fontheight)
-        self.surface = pygame.Surface((width, self.padding * 2 + self.font.get_linesize()))
+        self.surface = pygame.Surface((width,
+            self.padding * 2 + self.font.get_linesize()))
         self.border = pygame.Surface(self.surface.get_size(), pygame.SRCALPHA)
         self.pos = (x, y)
         self._disabled = False

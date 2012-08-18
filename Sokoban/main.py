@@ -107,7 +107,6 @@ class Main:
         self.stop_multiplayer()
 
     def run(self):
-        restart = False
         while not self.done:
             self.clock.tick(60)
             for event in pygame.event.get():
@@ -137,8 +136,6 @@ class Main:
             self.screen.fill((0, ) * 3)
             self.ui.reblit(self.screen)
             pygame.display.flip()
-        if restart:
-            return True
         pygame.quit()
 
 if __name__ == "__main__":

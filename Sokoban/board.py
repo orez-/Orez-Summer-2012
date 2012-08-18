@@ -35,13 +35,14 @@ class Tile:
 
 class Player(object):
     us_pic = pygame.image.load("imgs/us.png")
+
     def __init__(self, board, (x, y), me, teammate=None):
         self.x = x
         self.y = y
         lookup = ["me", "you"]
         self.player2 = teammate is not None
         self.me = me
-        self.pic = pygame.image.load("imgs/"+lookup[int(self.player2)]+".png")
+        self.pic = pygame.image.load("imgs/" + lookup[int(self.player2)] + ".png")
         self.board = board
         self.teammate = teammate
         if self.teammate is not None:
@@ -59,8 +60,8 @@ class Player(object):
                 print "sliding", self.x, self.y
             else:
                 self.ice_dir = None
-        loc = map(lambda (x,y):
-            (y-x+SCREEN_RADIUS) * Tile.BLOCKSIZE,
+        loc = map(lambda (x, y):
+            (y - x + SCREEN_RADIUS) * Tile.BLOCKSIZE,
             zip(center, (self.x, self.y)))
         if (self.teammate.x, self.teammate.y) == (self.x, self.y):
             screen.blit(Player.us_pic, loc)
@@ -147,15 +148,16 @@ class TileFeature(object):
     @staticmethod
     def build_ids():
         TileFeature.ID_TO_ITEM = {
-            1:Snorkel,
-            2:Button,
-            3:Beartrap,
-            4:Walltrap,
-            5:Timetrap,
-            6:Helptrap,
-            7:LaunchSpring,
-            8:LaunchTarget}
-        TileFeature.ITEM_TO_ID = {v:k for k,v in TileFeature.ID_TO_ITEM.items()}
+            1: Snorkel,
+            2: Button,
+            3: Beartrap,
+            4: Walltrap,
+            5: Timetrap,
+            6: Helptrap,
+            7: LaunchSpring,
+            8: LaunchTarget}
+        TileFeature.ITEM_TO_ID = {v: k for k, v in
+            TileFeature.ID_TO_ITEM.items()}
 
     @staticmethod
     def object_to_id(obj):
@@ -214,6 +216,7 @@ class LaunchTarget(TileFeature):
 
 class LaunchSpring(TileFeature):
     CAN_LINK = [LaunchTarget]
+
     def __init__(self, board, xy=None, activates=None):
         super(LaunchSpring, self).__init__(board, xy)
         self.img = pygame.image.load("imgs/spring.png")
@@ -271,11 +274,12 @@ class Beartrap(TileFeature):
         color = (128, 80, 0)
         if not self.active:
             color = (80, 128, 0)
-        pygame.draw.circle(surf, color, map(lambda q: q + Tile.BLOCKSIZE/2, (x, y)), 20)
+        pygame.draw.circle(surf, color, map(lambda q: q + Tile.BLOCKSIZE / 2, (x, y)), 20)
 
 
 class Button(TileFeature):
     CAN_LINK = [Beartrap, LaunchSpring]
+
     def __init__(self, board, xy=None, activates=None):
         super(Button, self).__init__(board, xy)
         self.color = (0xCC, ) * 3
@@ -304,9 +308,9 @@ class Button(TileFeature):
 
     def draw(self, surf, x, y):
         pygame.draw.circle(surf, self.color,
-            map(lambda q: q + Tile.BLOCKSIZE/2, (x, y)), 5)
+            map(lambda q: q + Tile.BLOCKSIZE / 2, (x, y)), 5)
         pygame.draw.circle(surf, (0, ) * 3,
-            map(lambda q: q + Tile.BLOCKSIZE/2, (x, y)), 5, 1)
+            map(lambda q: q + Tile.BLOCKSIZE / 2, (x, y)), 5, 1)
 
 
 class Walltrap(TileFeature):
@@ -317,7 +321,7 @@ class Walltrap(TileFeature):
 
     def draw(self, surf, x, y):
         color = (0x66, ) * 3
-        pygame.draw.circle(surf, color, map(lambda q: q + Tile.BLOCKSIZE/2, (x, y)), 20)
+        pygame.draw.circle(surf, color, map(lambda q: q + Tile.BLOCKSIZE / 2, (x, y)), 20)
 
 
 class Timetrap(TileFeature):
@@ -326,7 +330,7 @@ class Timetrap(TileFeature):
             stepper.time_trapped = not stepper.time_trapped
 
     def draw(self, surf, x, y):
-        circ = map(lambda q: q + Tile.BLOCKSIZE/2, (x, y))
+        circ = map(lambda q: q + Tile.BLOCKSIZE / 2, (x, y))
         pygame.draw.circle(surf, (0xEF, 0xE4, 0xB0), circ, 20)
         pygame.draw.circle(surf, (0, ) * 3, circ, 20, 1)
         pygame.draw.line(surf, (0, ) * 3, circ, (circ[0] + 10, circ[1]))
@@ -345,7 +349,7 @@ class Helptrap(TileFeature):
                     " " + self.text)
 
     def draw(self, surf, x, y):
-        circ = map(lambda q: q + Tile.BLOCKSIZE/2, (x, y))
+        circ = map(lambda q: q + Tile.BLOCKSIZE / 2, (x, y))
         pygame.draw.circle(surf, (0xFF, 0xD7, 0x00), circ, 20)
         pygame.draw.circle(surf, (0, ) * 3, circ, 20, 2)
         surf.blit(pygame.font.Font(None, 40).render("?", True, (0, ) * 3), (x + 16, y + 12))
@@ -363,7 +367,7 @@ class TileFeatureDict(object):
             self.yoff = stuff.yoff
             self.nums = stuff.nums[:]
         else:
-            self.stuff = {k:v for k, v in stuff.iteritems()}
+            self.stuff = {k: v for k, v in stuff.iteritems()}
             self.xoff = xoff
             self.yoff = yoff
 
@@ -409,7 +413,7 @@ class TileFeatureDict(object):
             if v.linkee and (v.linkee in self.nums):
                 i = self.nums.index(v.linkee)
                 surf.blit(self.font.render(str(i), True, (0x41, 0x69, 0xE1)),
-                    (Tile.BLOCKSIZE * (x + self.xoff), 
+                    (Tile.BLOCKSIZE * (x + self.xoff),
                      Tile.BLOCKSIZE * (y + self.yoff) + 35))
 
     def reblit(self, surf):
@@ -529,7 +533,7 @@ class Board:
         if y_min is not None:
             ycut = min(y_min, i)
         self.data = self.data[ycut:]
-        self.stuff.shift_offset(y=ycut-1)  # The -1 is for wall_wrap
+        self.stuff.shift_offset(y=ycut - 1)  # The -1 is for wall_wrap
 
         #print "After the UPSHIFT:", self.data
 
@@ -541,7 +545,7 @@ class Board:
         if x_min is not None:
             xcut = min(x_min, i)
         self.data = zip(*zip(*self.data)[xcut:])
-        self.stuff.shift_offset(x=xcut-1)
+        self.stuff.shift_offset(x=xcut - 1)
 
         #print "After the LEFTSHIFT:", self.data
 
@@ -589,9 +593,9 @@ class Board:
         x = self.can_move(who, (dx, dy))
         if x is True:
             if who.time_trapped:
-                if ((who.y+dy, who.x+dx) in self.stuff and
-                    isinstance(self.stuff[(who.y+dy, who.x+dx)], Beartrap) and
-                    self.stuff[(who.y+dy, who.x+dx)].active):
+                if ((who.y + dy, who.x + dx) in self.stuff and
+                    isinstance(self.stuff[(who.y + dy, who.x + dx)], Beartrap)
+                    and self.stuff[(who.y + dy, who.x + dx)].active):
                     return False
                 return self.pull_block(who, (dx, dy))
             return True
