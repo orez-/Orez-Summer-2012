@@ -26,12 +26,16 @@ class MapUI(ui.UI):
         self.size = map(self.scale_coord_width, SCREEN_SLOTS)
 
         self.map = main.map  # MapDS()
-        self.expand_room()
+        # self.expand_room()
         self.preload_expansion()
 
         self.dir = 0
         self.last_dir = 1
         self.frame = MapUI.FRAMES
+
+        self.hilite_loc = map(lambda q: (q // (15 * 50)) * SCALE * 2 - SCALE // 2,
+            self.parent.slime.center)
+        self.dot_counter = 0
 
     def scale_coord(self, q):
         return int(q * (self.spacing + 1) * SCALE)
@@ -63,24 +67,6 @@ class MapUI(ui.UI):
             size = SCALE, self.spacing * SCALE
         self.surface.fill(path_color, (loc, size))
 
-    def add_path(self, (x, y), dr):
-        if dr == 1:
-            x, y, horiz = x, y, 0
-        elif dr == 2:
-            x, y, horiz = x - 1, y, 1
-        elif dr == 4:
-            x, y, horiz = x, y - 1, 0
-        elif dr == 8:
-            x, y, horiz = x, y, 1
-        else:
-            return
-        self.draw_path((x, y), horiz)
-        self.map.all_paths.add((x, y, horiz))
-
-    def add_room(self, (x, y), (w, h)):
-        self.map.add_room((x, y), (w, h))
-        self.draw_room((x, y), (w, h))
-
     def preload_expansion(self):
         FRAMES = MapUI.FRAMES
         temp_surf = self.surface
@@ -111,40 +97,11 @@ class MapUI(ui.UI):
             self.dir = 0
         surf.blit(self.animation_surfs[self.frame], (0, 0))
 
-    def expand_room(self):
-        next = {(0, 0): 0}  # coordinate location cannot overlap: direction irrelevant
-        while next:
-            loc, dr = next.popitem()  # get a random location and direction for a path
-            if (not self.map.in_bounds(loc) or
-                    self.map.get_at(loc) is not None):  # this one isn't valid.
-                continue  # or something
-            self.add_path(loc, dr)
-            options = [(2, 3), (3, 2), (2, 2), (1, 2), (2, 1)]  # all different room sizes
-            while 1:
-                if not options:  # nothing fit...
-                    shape = (1, 1)  # only then can you fill the area
-                    self.add_room(loc, shape)
-                    break
-                shape = random.choice(options)  # pick a random shape
-                fit = self.map.try_fit(loc, shape)  # see if it can fit in that area
-                if fit:  # also selects a valid configuration for you.
-                    self.add_room(fit, shape)
-                    room_locs = set(self.map.room_iter(fit, shape))  # get each location on the new room
-
-                    dictlist = ({(dx - 1, dy): 8, (dx + 1, dy): 2,
-                                 (dx, dy - 1): 1, (dx, dy + 1): 4}
-                                 for dx, dy in room_locs)  # get every direction off of these points (for a path)
-
-                    close_locs = {}
-                    for d in dictlist:
-                        close_locs.update(d)  # combine each direction into one dic
-
-                    for loc in room_locs:  # close_locs -= room_locs
-                        close_locs.pop(loc, None)  # remove yourself from the adjacency
-
-                    next.update(close_locs)  # everything that remains is fair game as a path
-                    break
-                del options[options.index(shape)]
+        if self.dot_counter > 25:
+            pygame.draw.rect(surf, (0xFF, 0, 0), 
+                (self.hilite_loc,
+                (SCALE * 2, SCALE * 2)))
+        self.dot_counter = (self.dot_counter + 1) % 50
 
     def screen_size(self):
         return map(self.scale_coord_width, SCREEN_SLOTS)
@@ -164,6 +121,8 @@ class MapDS:
         self.room_map = [[None for x in xrange(SCREEN_SLOTS[0])]
                                for y in xrange(SCREEN_SLOTS[1])]  # 2d list maps coordinates to room_objects
         self.all_paths = set()
+
+        self.expand_room()
 
     def get_at(self, (x, y)):
         return self.room_map[y][x]
@@ -226,6 +185,53 @@ class MapDS:
             for dy in xrange(y, y + h):
                 yield (dx, dy)
 
+    def surround_iter(self, (x, y), (w, h)):
+        for dx in xrange(x - 1, x + w + 1):
+            if self.in_bounds((dx, y - 1)):
+                yield (dx, y - 1)
+            if self.in_bounds((dx, y + h)):
+                yield (dx, y + h)
+        for dy in xrange(y, y + h):
+            if self.in_bounds((x - 1, dy)):
+                yield (x - 1, dy)
+            if self.in_bounds((x + w, dy)):
+                yield (x + w, dy)
+
+    def expand_room(self):
+        next = {(0, 0): 0}  # coordinate location cannot overlap: direction irrelevant
+        while next:
+            loc, dr = next.popitem()  # get a random location and direction for a path
+            if (not self.in_bounds(loc) or
+                    self.get_at(loc) is not None):  # this one isn't valid.
+                continue  # or something
+            self.add_path(loc, dr)
+            options = [(2, 3), (3, 2), (2, 2), (1, 2), (2, 1)]  # all different room sizes
+            while 1:
+                if not options:  # nothing fit...
+                    shape = (1, 1)  # only then can you fill the area
+                    self.add_room(loc, shape)
+                    break
+                shape = random.choice(options)  # pick a random shape
+                fit = self.try_fit(loc, shape)  # see if it can fit in that area
+                if fit:  # also selects a valid configuration for you.
+                    self.add_room(fit, shape)
+                    room_locs = set(self.room_iter(fit, shape))  # get each location on the new room
+
+                    dictlist = ({(dx - 1, dy): 8, (dx + 1, dy): 2,
+                                 (dx, dy - 1): 1, (dx, dy + 1): 4}
+                                 for dx, dy in room_locs)  # get every direction off of these points (for a path)
+
+                    close_locs = {}
+                    for d in dictlist:
+                        close_locs.update(d)  # combine each direction into one dic
+
+                    for loc in room_locs:  # close_locs -= room_locs
+                        close_locs.pop(loc, None)  # remove yourself from the adjacency
+
+                    next.update(close_locs)  # everything that remains is fair game as a path
+                    break
+                del options[options.index(shape)]
+
     def del_room(self, param):
         try:
             me = self.room_map[param[1]][param[0]]
@@ -240,3 +246,16 @@ class MapDS:
         self.all_rooms[me] = ((x, y), (w, h))
         for dx, dy in self.room_iter((x, y), (w, h)):
             self.room_map[dy][dx] = me
+
+    def add_path(self, (x, y), dr):
+        if dr == 1:
+            x, y, horiz = x, y, 0
+        elif dr == 2:
+            x, y, horiz = x - 1, y, 1
+        elif dr == 4:
+            x, y, horiz = x, y - 1, 0
+        elif dr == 8:
+            x, y, horiz = x, y, 1
+        else:
+            return
+        self.all_paths.add((x, y, horiz))
