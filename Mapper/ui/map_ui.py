@@ -13,6 +13,25 @@ COLORS = {(2, 3): ((234, 153, 217), (232, 0, 162)),
           (2, 1): ((44, 86, 255), (63, 72, 204)),
           (1, 1): ((0, 0, 0), (255, 127, 39))}
 
+UP, RIGHT, DOWN, LEFT = [2 ** x for x in xrange(4)]
+
+
+class RoomDS(object):
+    def __init__(self, (x, y), (w, h)):
+        self.x, self.y = x, y
+        self.w, self.h = w, h
+        self.paths = set()
+
+    def get_rect(self):
+        return (self.x, self.y), (self.w, self.h)
+
+    def add_path(self, (x, y), dr):
+        self.paths.add((x, y, dr))
+
+    def paths_iter(self):
+        for x, y, dr in self.paths:
+            yield (x - self.x, y - self.y, dr)
+
 
 class MapUI(ui.UI):
     FRAMES = 10
@@ -33,7 +52,7 @@ class MapUI(ui.UI):
         self.last_dir = 1
         self.frame = MapUI.FRAMES
 
-        self.hilite_loc = map(lambda q: (q // (15 * 50)) * SCALE * 2 - SCALE // 2,
+        self.hilite_loc = map(lambda q: (q // (15 * 50)),
             self.parent.slime.center)
         self.dot_counter = 0
 
@@ -84,8 +103,8 @@ class MapUI(ui.UI):
 
     def redraw(self):
         self.surface.fill((0xFF, ) * 3)
-        for (x, y), (w, h) in self.map.all_rooms.values():
-            self.draw_room((x, y), (w, h))
+        for room in self.map.all_rooms:
+            self.draw_room(*room.get_rect())
 
         for x, y, horiz in self.map.all_paths:
             self.draw_path((x, y), horiz)
@@ -98,8 +117,9 @@ class MapUI(ui.UI):
         surf.blit(self.animation_surfs[self.frame], (0, 0))
 
         if self.dot_counter > 25:
-            pygame.draw.rect(surf, (0xFF, 0, 0), 
-                (self.hilite_loc,
+            pygame.draw.rect(surf, (0xFF, 0, 0),
+                (map(lambda q: q * (SCALE + int(self.frame * SCALE // MapUI.FRAMES)) - SCALE // 2,
+                    self.hilite_loc),
                 (SCALE * 2, SCALE * 2)))
         self.dot_counter = (self.dot_counter + 1) % 50
 
@@ -117,7 +137,7 @@ class MapUI(ui.UI):
 
 class MapDS:
     def __init__(self):
-        self.all_rooms = {}  # room_object -> ((x, y), (w, h))
+        self.all_rooms = set()
         self.room_map = [[None for x in xrange(SCREEN_SLOTS[0])]
                                for y in xrange(SCREEN_SLOTS[1])]  # 2d list maps coordinates to room_objects
         self.all_paths = set()
@@ -217,8 +237,8 @@ class MapDS:
                     self.add_room(fit, shape)
                     room_locs = set(self.room_iter(fit, shape))  # get each location on the new room
 
-                    dictlist = ({(dx - 1, dy): 8, (dx + 1, dy): 2,
-                                 (dx, dy - 1): 1, (dx, dy + 1): 4}
+                    dictlist = ({(dx - 1, dy): LEFT, (dx + 1, dy): RIGHT,
+                                 (dx, dy - 1): UP, (dx, dy + 1): DOWN}
                                  for dx, dy in room_locs)  # get every direction off of these points (for a path)
 
                     close_locs = {}
@@ -231,6 +251,7 @@ class MapDS:
                     next.update(close_locs)  # everything that remains is fair game as a path
                     break
                 del options[options.index(shape)]
+        self.fill_paths()
 
     def del_room(self, param):
         try:
@@ -239,23 +260,30 @@ class MapDS:
             me = param
         for dx, dy in self.room_iter(self.all_rooms[me]):
             self.room_map[dy][dx] = None
-        del self.all_rooms[me]
+        # probably gotta fix the paths
+        self.all_rooms.remove(me)
 
     def add_room(self, (x, y), (w, h)):
-        me = object()
-        self.all_rooms[me] = ((x, y), (w, h))
+        me = RoomDS((x, y), (w, h))
+        self.all_rooms.add(me)
         for dx, dy in self.room_iter((x, y), (w, h)):
             self.room_map[dy][dx] = me
 
     def add_path(self, (x, y), dr):
-        if dr == 1:
+        if dr == UP:
             x, y, horiz = x, y, 0
-        elif dr == 2:
+        elif dr == RIGHT:
             x, y, horiz = x - 1, y, 1
-        elif dr == 4:
+        elif dr == DOWN:
             x, y, horiz = x, y - 1, 0
-        elif dr == 8:
+        elif dr == LEFT:
             x, y, horiz = x, y, 1
         else:
             return
         self.all_paths.add((x, y, horiz))
+
+    def fill_paths(self):
+        for x, y, horiz in self.all_paths:
+            self.get_at((x, y)).add_path((x, y), RIGHT if horiz else DOWN)
+            loc = (x + horiz, y + (not horiz))
+            self.get_at(loc).add_path(loc, LEFT if horiz else UP)
