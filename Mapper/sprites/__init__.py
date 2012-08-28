@@ -6,6 +6,7 @@ class Sprite(pygame.sprite.DirtySprite):
     """ The sprite class assumes """
     def __init__(self, animations, (x, y)=(0, 0)):
         self.animations = animations
+        self.layer = 1
 
         self.x, self.y = (x, y)
 
@@ -23,7 +24,7 @@ class Sprite(pygame.sprite.DirtySprite):
     height = property(lambda self: self.size[1])
     size = property(lambda self: self.animations.size)
     pos = property(lambda self: (self.x, self.y),
-        lambda self, (x, y): set_xy(x=x, y=y))
+        lambda self, (x, y): self.set_xy(x=x, y=y))
     center = property(lambda self: (self.centerx, self.centery),
         lambda self, (x, y):
         self.set_xy(x=x - self.width // 2, y=y - self.height // 2))

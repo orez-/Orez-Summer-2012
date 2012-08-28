@@ -25,7 +25,12 @@ class OverworldUI(ui.UI):
         (rx, ry), (w, h) = self.main.map.get_at((px, py)).get_rect()
         for x, y in self.main.map.surround_iter((rx, ry), (w, h)):
             self.load_room((x, y))
+        try:
+            self.room_data.entities.discard(self.slime)
+        except AttributeError:
+            pass
         self.room_data = self.load_room((rx, ry))
+        self.room_data.entities.add(self.slime)
 
     def load_room(self, (x, y)):
         room = self.main.map.get_at((x, y))
@@ -56,7 +61,6 @@ class OverworldUI(ui.UI):
         center = self.slime.centerx - 300, self.slime.centery - 225
         for t in self.terrain:
             t.reblit(surf, time_passed, center, self.room_data.pos)
-        self.slime.reblit(surf, time_passed, center)
 
     def handle_key(self, event):
         if event.key == pygame.K_m:
@@ -73,12 +77,18 @@ class OverworldUI(ui.UI):
         if self.main.keys & set((pygame.K_s, pygame.K_DOWN)):
             yoff += 1
         if not (xoff == yoff == 0):  # there is movement
-            if self.slime.move(self.room_data, xoff, yoff):
-                self.room_data = Inside()
+            ret = self.slime.move(self.room_data, xoff, yoff)
+            if ret == "room":
+                self.room_data.entities.discard(self.slime)
+                self.room_data = Inside(self.room_data.pos, self.slime.pos)
+                self.room_data.entities.add(self.slime)
                 self.terrain = [self.room_data]
-                self.slime.x = 50
-                self.slime.y = 360
+                self.slime.pos = (50, 360)
                 return
+            elif ret == "out":
+                self.slime.pos = self.room_data.player_toR
+                self.load_rooms_around(self.room_data.room_toR)
+
             newx = int(self.slime.x // (Room.TPS * 50))
             newy = int(self.slime.y // (Room.TPS * 50))
             if not (0 <= newx < self.room_data.w and

@@ -17,6 +17,7 @@ class Room(object):
         self.impassible = impassible
         self.roomds = roomds
         self.entities = set()
+        self.transitions = {}
         self.redraw()
 
     pos = property(lambda self: (self.roomds.x, self.roomds.y))

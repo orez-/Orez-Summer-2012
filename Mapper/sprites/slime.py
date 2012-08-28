@@ -53,8 +53,8 @@ class SlimeAI(Sprite):
         if hittin in room.impassible:
             yoff = 0
 
-        if hittin == (4, 2):
-            return "room"
+        if hittin in room.transitions:
+            return room.transitions[hittin]
 
 
         self.x += xoff * mult

@@ -17,6 +17,7 @@ class Grasslands(Room):
         self.entities.add(ElementalAI(
             (random.randint(1, room.w * Room.TPS - 10) * 50,
             random.randint(1, room.h * Room.TPS) * 50)))
+        self.transitions = {(4, 3): "room"}
 
     def generate_room(self, room):
         width = room.w * Room.TPS
@@ -70,20 +71,24 @@ TILESET2 = pygame.image.load("imgs/inside.png")
 
 
 class Inside(Room):
-    def __init__(self):
+    def __init__(self, room_toR, player_toR):
+        self.room_toR = room_toR
+        self.player_toR = player_toR
         room = RoomDS((0, 0), (1, 1))
         map_data = self.generate_room(room)
         impassible = ((0, 0), (1, 0), (3, 0), (0, 1), (3, 1), (0, 2), (2, 2), (3, 2))
         super(Inside, self).__init__(map_data, (TILESET2, impassible), room)
         self.entities.add(GoblinAI((200, 50)))
+        self.transitions = {(2, 1): "out"}
 
     def generate_room(self, room):
         width = room.w * 12
-        height = room.h * 8
+        height = room.h * 9
         toR = [[(0, 0)] + [(1, 0)] * (width - 2) + [(3, 0)]] + [
             [(0, 1)] + [(1, 1)] * (width - 2) + [(3, 1)]
             for _ in xrange(height - 2)] + [
-            [(0, 2), (1, 2)] + [(2, 2)] * (width - 3) + [(3, 2)]]
+            [(0, 2), (1, 2)] + [(2, 2)] * (width - 3) + [(3, 2)]] + [
+            [(2, 0), (2, 1)] + [(2, 0)] * (width - 2)]
 
         return toR
 
