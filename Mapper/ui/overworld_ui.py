@@ -14,10 +14,10 @@ SCREEN_SIZE = (600, 450)
 class OverworldUI(ui.UI):
     def __init__(self, main, parent):
         super(OverworldUI, self).__init__(main, parent)
-        self.slime = SlimeAI((18800, 18800))
+        self.slime = SlimeAI((50, 50))
 
         self.terrain = []
-        self.load_rooms_around(self.slime.room_pos)
+        self.load_rooms_around((25, 25))
 
         self.redraw()
 
@@ -55,7 +55,7 @@ class OverworldUI(ui.UI):
         super(OverworldUI, self).reblit(surf, time_passed)
         center = self.slime.centerx - 300, self.slime.centery - 225
         for t in self.terrain:
-            t.reblit(surf, time_passed, center, (0, 0))  # self.room_data[0])
+            t.reblit(surf, time_passed, center, self.room_data.pos)
         self.slime.reblit(surf, time_passed, center)
 
     def handle_key(self, event):
@@ -81,9 +81,14 @@ class OverworldUI(ui.UI):
                 return
             newx = int(self.slime.x // (Room.TPS * 50))
             newy = int(self.slime.y // (Room.TPS * 50))
-            if not (0 <= newx - self.room_data.x < self.room_data.w and
-                    0 <= newy - self.room_data.y < self.room_data.h):
-                self.load_rooms_around((newx, newy))
+            if not (0 <= newx < self.room_data.w and
+                    0 <= newy < self.room_data.h):
+                x, y = self.room_data.pos  # keep the current room's position
+                self.load_rooms_around((newx + self.room_data.x,
+                        newy + self.room_data.y))
+                # readjust for the new room
+                self.slime.x += (x - self.room_data.x) * Room.TPS * 50
+                self.slime.y += (y - self.room_data.y) * Room.TPS * 50
         elif self.slime.animations.name[1] != "idle":
             self.slime.animations.cur_animation = (
                 self.slime.animations.name[0], "idle")

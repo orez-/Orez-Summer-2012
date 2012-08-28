@@ -1,8 +1,10 @@
+import random
+import pygame
+
 from terrain import Room
 from ui.map_ui import RoomDS
 from sprites.goblin import GoblinAI
 from sprites.elemental import ElementalAI
-import pygame
 
 TILESET = pygame.image.load("imgs/grasslands.png")
 
@@ -12,7 +14,9 @@ class Grasslands(Room):
         map_data = self.generate_room(room)
         impassible = tuple((x, y) for x in xrange(6) for y in xrange(4) if (x, y) not in ((0, 0), (4, 3), (4, 2)))
         super(Grasslands, self).__init__(map_data, (TILESET, impassible), room)
-        self.entities.add(ElementalAI((18800, 18800)))
+        self.entities.add(ElementalAI(
+            (random.randint(1, room.w * Room.TPS - 10) * 50,
+            random.randint(1, room.h * Room.TPS) * 50)))
 
     def generate_room(self, room):
         width = room.w * Room.TPS

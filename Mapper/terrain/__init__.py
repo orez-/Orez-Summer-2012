@@ -40,11 +40,12 @@ class Room(object):
         return self.get_at((x - self.x * Room.TPS, y - self.y * Room.TPS))
 
     def reblit(self, surf, time_passed, (vx, vy), (tlrx, tlry)):
-        surf.blit(self.surface,
-            ((self.x - tlrx) * 50 * Room.TPS - vx,
-             (self.y - tlry) * 50 * Room.TPS - vy))
+        pos = (vx - (self.x - tlrx) * 50 * Room.TPS,
+               vy - (self.y - tlry) * 50 * Room.TPS)
+        surf.blit(self.surface, map(lambda q: -q, pos))
         for e in self.entities:
-            e.reblit(surf, time_passed, (vx, vy))
+            e.act()
+            e.reblit(surf, time_passed, pos)
 
     def redraw(self):
         for y, row in enumerate(self.map):

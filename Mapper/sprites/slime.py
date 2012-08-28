@@ -36,9 +36,9 @@ class SlimeAI(Sprite):
         mult = DIAG if xoff and yoff else SPEED
         hittin = None
         if xoff < 0:
-            hittin = room.get_abs(self.tile_coords((self.left + xoff * mult, self.centery)))
+            hittin = room.get_at(self.tile_coords((self.left + xoff * mult, self.centery)))
         elif xoff > 0:
-            hittin = room.get_abs(self.tile_coords((self.right + xoff * mult, self.centery)))
+            hittin = room.get_at(self.tile_coords((self.right + xoff * mult, self.centery)))
 
         if hittin in room.impassible:
             xoff = 0
@@ -46,9 +46,9 @@ class SlimeAI(Sprite):
 
         hittin = None
         if yoff < 0:
-            hittin = room.get_abs(self.tile_coords((self.centerx, self.top + yoff * mult)))
+            hittin = room.get_at(self.tile_coords((self.centerx, self.top + yoff * mult)))
         elif yoff > 0:
-            hittin = room.get_abs(self.tile_coords((self.centerx, self.bottom + yoff * mult)))
+            hittin = room.get_at(self.tile_coords((self.centerx, self.bottom + yoff * mult)))
 
         if hittin in room.impassible:
             yoff = 0

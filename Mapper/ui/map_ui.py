@@ -52,8 +52,8 @@ class MapUI(ui.UI):
         self.last_dir = 1
         self.frame = MapUI.FRAMES
 
-        self.hilite_loc = map(lambda q: (q // (15 * 50)),
-            self.parent.slime.center)
+        self.hilite_loc = map(sum, zip(map(lambda q: (q // (15 * 50)),
+            self.parent.slime.center), self.parent.room_data.pos))
         self.dot_counter = 0
 
     def scale_coord(self, q):
@@ -117,10 +117,11 @@ class MapUI(ui.UI):
         surf.blit(self.animation_surfs[self.frame], (0, 0))
 
         if self.dot_counter > 25:
+            spacing = int(self.frame * SCALE // MapUI.FRAMES)
             pygame.draw.rect(surf, (0xFF, 0, 0),
-                (map(lambda q: q * (SCALE + int(self.frame * SCALE // MapUI.FRAMES)) - SCALE // 2,
+                (map(lambda q: q * (SCALE + spacing) - spacing // 2,
                     self.hilite_loc),
-                (SCALE * 2, SCALE * 2)))
+                (SCALE + spacing, SCALE + spacing)))
         self.dot_counter = (self.dot_counter + 1) % 50
 
     def screen_size(self):

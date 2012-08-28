@@ -22,3 +22,7 @@ class ElementalAI(Sprite):
     def move(self, room, x=0, y=0):
         self.x += x * 5
         self.y += y * 5
+
+    def act(self):
+        self.x += random.randint(-5, 5)
+        self.y += random.randint(-5, 5)
