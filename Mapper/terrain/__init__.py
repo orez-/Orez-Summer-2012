@@ -9,14 +9,17 @@ class Tile(object):
 class Room(object):
     TPS = 15  # Tiles per Square
 
-    def __init__(self, map_data, tile_map, roomds):
+    def __init__(self, map_data, (tile_map, impassible), roomds):
         self.map = [d[:] for d in map_data]
         self.tile_map = tile_map
         self.surface = pygame.Surface(
             map(self.resize, (len(self.map[0]), len(self.map))))
+        self.impassible = impassible
         self.roomds = roomds
+        self.entities = set()
         self.redraw()
 
+    pos = property(lambda self: (self.roomds.x, self.roomds.y))
     x = property(lambda self: self.roomds.x)
     y = property(lambda self: self.roomds.y)
     w = property(lambda self: self.roomds.w)
@@ -36,10 +39,12 @@ class Room(object):
         """ In terms of character tile position from the top left room """
         return self.get_at((x - self.x * Room.TPS, y - self.y * Room.TPS))
 
-    def reblit(self, surf, (vx, vy), (tlrx, tlry)):
+    def reblit(self, surf, time_passed, (vx, vy), (tlrx, tlry)):
         surf.blit(self.surface,
             ((self.x - tlrx) * 50 * Room.TPS - vx,
              (self.y - tlry) * 50 * Room.TPS - vy))
+        for e in self.entities:
+            e.reblit(surf, time_passed, (vx, vy))
 
     def redraw(self):
         for y, row in enumerate(self.map):

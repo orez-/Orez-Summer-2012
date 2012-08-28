@@ -1,4 +1,5 @@
 import pygame
+from terrain import Room
 
 
 class Sprite(pygame.sprite.DirtySprite):
@@ -8,12 +9,16 @@ class Sprite(pygame.sprite.DirtySprite):
 
         self.x, self.y = (x, y)
 
+    def act(self):
+        pass
+
     def set_xy(self, x=None, y=None):
         if x is not None:
             self.x = x
         if y is not None:
             self.y = y
 
+    room_pos = property(lambda self: (self.x // (Room.TPS * 50), self.y // (Room.TPS * 50)))
     width = property(lambda self: self.size[0])
     height = property(lambda self: self.size[1])
     size = property(lambda self: self.animations.size)

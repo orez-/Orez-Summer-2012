@@ -3,8 +3,10 @@ import pygame
 import ui
 from ui.map_ui import MapUI
 from terrain import Room
-from terrain.rooms import Grasslands
+from terrain.rooms import *
 from sprites.slime import SlimeAI
+from sprites.goblin import GoblinAI
+from sprites.elemental import ElementalAI
 
 SCREEN_SIZE = (600, 450)
 
@@ -12,10 +14,10 @@ SCREEN_SIZE = (600, 450)
 class OverworldUI(ui.UI):
     def __init__(self, main, parent):
         super(OverworldUI, self).__init__(main, parent)
-        self.slime = SlimeAI((50, 50))
+        self.slime = SlimeAI((18800, 18800))
 
         self.terrain = []
-        self.load_rooms_around((0, 0))
+        self.load_rooms_around(self.slime.room_pos)
 
         self.redraw()
 
@@ -37,7 +39,11 @@ class OverworldUI(ui.UI):
                 del self.terrain[i]
                 self.terrain.append(item)
                 return item
-        room_obj = Grasslands(room)
+
+        if (x - 25) ** 2 + (y - 25) ** 2 < 625:
+            room_obj = Grasslands(room)
+        else:
+            room_obj = Ocean(room)
         self.terrain.append(room_obj)
         self.terrain = self.terrain[-16:]  # limit the list to 16 elements
         return room_obj
@@ -49,7 +55,7 @@ class OverworldUI(ui.UI):
         super(OverworldUI, self).reblit(surf, time_passed)
         center = self.slime.centerx - 300, self.slime.centery - 225
         for t in self.terrain:
-            t.reblit(surf, center, (0, 0))  # self.room_data[0])
+            t.reblit(surf, time_passed, center, (0, 0))  # self.room_data[0])
         self.slime.reblit(surf, time_passed, center)
 
     def handle_key(self, event):
@@ -67,7 +73,12 @@ class OverworldUI(ui.UI):
         if self.main.keys & set((pygame.K_s, pygame.K_DOWN)):
             yoff += 1
         if not (xoff == yoff == 0):  # there is movement
-            self.slime.move(self.room_data, xoff, yoff)
+            if self.slime.move(self.room_data, xoff, yoff):
+                self.room_data = Inside()
+                self.terrain = [self.room_data]
+                self.slime.x = 50
+                self.slime.y = 360
+                return
             newx = int(self.slime.x // (Room.TPS * 50))
             newy = int(self.slime.y // (Room.TPS * 50))
             if not (0 <= newx - self.room_data.x < self.room_data.w and

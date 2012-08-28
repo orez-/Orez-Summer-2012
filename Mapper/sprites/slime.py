@@ -34,18 +34,28 @@ class SlimeAI(Sprite):
         if dirc != self.animations.name:
             self.animations.set_animation(dirc)
         mult = DIAG if xoff and yoff else SPEED
+        hittin = None
         if xoff < 0:
-            if room.get_abs(self.tile_coords((self.left + xoff * mult, self.centery))) == (1, 0):
-                xoff = 0
+            hittin = room.get_abs(self.tile_coords((self.left + xoff * mult, self.centery)))
         elif xoff > 0:
-            if room.get_abs(self.tile_coords((self.right + xoff * mult, self.centery))) == (1, 0):
-                xoff = 0
+            hittin = room.get_abs(self.tile_coords((self.right + xoff * mult, self.centery)))
+
+        if hittin in room.impassible:
+            xoff = 0
+
+
+        hittin = None
         if yoff < 0:
-            if room.get_abs(self.tile_coords((self.centerx, self.top + yoff * mult))) == (1, 0):
-                yoff = 0
+            hittin = room.get_abs(self.tile_coords((self.centerx, self.top + yoff * mult)))
         elif yoff > 0:
-            if room.get_abs(self.tile_coords((self.centerx, self.bottom + yoff * mult))) == (1, 0):
-                yoff = 0
+            hittin = room.get_abs(self.tile_coords((self.centerx, self.bottom + yoff * mult)))
+
+        if hittin in room.impassible:
+            yoff = 0
+
+        if hittin == (4, 2):
+            return "room"
+
 
         self.x += xoff * mult
         self.y += yoff * mult
