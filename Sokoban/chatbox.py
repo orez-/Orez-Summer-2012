@@ -15,6 +15,13 @@ INPUT_Y = SCREEN_SIZE[1] - CHAT_FONT_HEIGHT - CHAT_EDGE * 3 / 2
 CHAT_Y = INPUT_Y - CHAT_HEIGHT - CHAT_EDGE
 
 CHAT_LINGER = 3
+temp_surf = pygame.Surface((CHAT_WIDTH, CHAT_BUFFER))
+
+def blit_alpha(target, surf, (x, y), opacity, rect=None):
+    temp_surf.blit(target, (-x, -y))
+    temp_surf.blit(surf, (0, 0), rect)
+    temp_surf.set_alpha(opacity)
+    target.blit(temp_surf, (x, y))
 
 
 class Inputbox:
@@ -59,11 +66,16 @@ class Chatbox:
 
     def reblit(self, surf):
         if self.hide_time is not None:
-            if self.hide_time is not True and self.hide_time < time.time():
+            diff = CHAT_LINGER // 2
+            if self.hide_time is not True:
+                diff = self.hide_time - time.time()
+            if diff < 0:
                 self.hide_time = None
-            surf.blit(self.bg_surface, (CHAT_EDGE, CHAT_Y))
-            surf.blit(self.text_surface,
-                (CHAT_EDGE / 2, CHAT_Y + CHAT_EDGE / 2),
+                return
+            opacity = int(min((float(diff * 0xFF) / (CHAT_LINGER / 2)), 0xFF))
+            blit_alpha(surf, self.bg_surface, (CHAT_EDGE, CHAT_Y), opacity)
+            blit_alpha(surf, self.text_surface,
+                (CHAT_EDGE / 2, CHAT_Y + CHAT_EDGE / 2), opacity,
                 ((0, CHAT_BUFFER - CHAT_HEIGHT + CHAT_EDGE),
                  (CHAT_WIDTH, CHAT_HEIGHT - CHAT_EDGE / 2)))
             if self.hide_time is True:
