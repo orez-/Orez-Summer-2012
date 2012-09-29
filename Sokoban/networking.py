@@ -13,63 +13,100 @@ ADDR = (HOST,PORT)
 
 MAX_PACKET_LENGTH = 1024
 
+class UserSlot(object):
+    OPEN = object()  # uses less memory than an integer, actually.
+    PLAYER = object()
+
+    def __init__(self, *args):
+        self.set_open()
+
+    def parse_buffer(self):
+        toR = []
+        while RS in self.buffer:
+            term, _, self.buffer = self.buffer.partition(RS)
+            toR.append(term)
+        return toR
+
+    def set_open(self):
+        self._status = UserSlot.OPEN
+        self.conn = None
+        self.buffer = ""
+        self.player = None
+
+    def new_player(self, connection, teammate=None):
+        self.set_connection(connection)
+        self.player = Player(None, (0, 0), False, teammate)
+
+    def set_connection(self, connection, safe_mode=True):
+        assert((not safe_mode) or self.is_open())
+        self.conn = connection
+        self._status = UserSlot.PLAYER
+
+    def is_open(self):
+        return self._status == UserSlot.OPEN
+
+    def send(self, *msg):
+        message = ' '.join(map(str, msg))
+        self.conn.send(message + RS)
+
+
 class Server(threading.Thread):
-    CLOSED = 1
-    PLAYER = 2
     def __init__(self):
         threading.Thread.__init__(self)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind(ADDR)
         self.done = False
-        self.board = Board([[]])
-        self.board.add_stuff({})
-        self.slots = [{"type":Server.CLOSED} for _ in xrange(2)]
+        self.board = None
+        self.boardname = None
+        self.slots = [UserSlot() for _ in xrange(2)]
 
         self.polls = {}
         self.poll_commands = {"restart": self.cmd_restart}
 
     def cmd_restart(self):
         self.broadcast("RESTART")
+        self.load_level()
 
     def run(self):
         self.sock.listen(2)
         while not self.done:
-            inputs = [x["conn"] for x in self.slots if x.has_key("conn")] + [self.sock]
+            inputs = [x.conn for x in self.slots if not x.is_open()] + [self.sock]
             # blocks until someone connects or a client sends a message
             ready, _, _ = select.select(inputs, [], [], 0.5)
             for c in ready:
                 if c == self.sock:    # new player
-                    conn, _ = c.accept()
-                    x = self.get_next_slot()
-                    other_player = None
-                    if x:
-                        other_player = self.slots[0]["player"]
-                    self.slots[x] = {"type": Server.PLAYER, "conn": conn,
-                        "player": Player(self.board, (0, 0), False, other_player),
-                        "buffer": ""}
-                    if x:  # second player in
-                        self.broadcast("START")  # TODO: probably want to send which map we're playing on
+                    self.player_join(c)
                 else:   # returning player's command
-                    sender = self.get_sender(c)
-                    message = self.slots[sender]["conn"].recv(MAX_PACKET_LENGTH)
+                    message = c.recv(MAX_PACKET_LENGTH)
                     if not message:  # close connection
-                        c.close()
+                        c.close()  # TODO: probably want more in here
+                        self.slots[sender].set_open()
                     else:   # a real command
                         sender = self.get_sender(c)
-                        self.slots[sender]["buffer"] += message
+                        self.slots[sender].buffer += message
+                        messages = self.slots[sender].parse_buffer()
+                        for msg in messages:
+                            self.handle_input(sender, msg)
 
-                        while RS in self.slots[sender]["buffer"]:
-                            term, _, self.slots[sender]["buffer"] = self.slots[sender]["buffer"].partition(RS)
-                            self.handle_input(sender, term)
+    def player_join(self, c):
+        conn, _ = c.accept()
+        x = self.get_next_slot()
+        if x:
+            self.slots[x].new_player(conn, self.slots[0].player)
+            self.broadcast("START")
+        else:
+            self.slots[x].new_player(conn)
 
     def handle_input(self, slot, message):
         msg = message.split(" ")
         if msg[0] == "MOVED":
-            #self.slots[slot]["player"].move(int(msg[1]), int(msg[2]))
-            self.broadcast(' '.join((msg[0], str(slot), msg[1], msg[2])))
+            dx, dy = map(int, msg[1:])
+            p = self.slots[slot].player
+            if p.move(dx, dy):
+                self.broadcast(msg[0], str(slot), msg[1], msg[2])
         elif msg[0] == "MSG":
-            if msg[1][:1] == "/":
+            if msg[1][:1] == "/":  # /commands
                 command = msg[1][1:]
                 if command in self.poll_commands:
                     if command in self.polls and self.polls[command] != slot:
@@ -83,32 +120,37 @@ class Server(threading.Thread):
                             command + US + "03 to allow.")
                 else:
                     if command == "help":
-                        self.send("MSG 2 The following commands are available: " +
-                            ', '.join(self.poll_commands), slot)
+                        self.slots[slot].send("MSG 2 The following commands are available: " +
+                            ', '.join(self.poll_commands))
                     else:
-                        self.send("MSG 2 Unknown command: "+command, slot)
+                        self.slots[slot].send("MSG 2 Unknown command:", command)
             else:
-                self.broadcast(' '.join([msg[0], str(slot)] + msg[1:]))
+                self.broadcast(msg[0], slot, *msg[1:])
         elif msg[0] == "HELP":
-            self.send("MSG 3 ? " + US + "02" + ' '.join(msg[2:]), int(msg[1]))
+            self.slots[int(msg[1])].send("MSG 3 ? " + US + "02" + ' '.join(msg[2:]))
         elif msg[0] == "LEVELOFF":  # propagate
-            self.send(' '.join(msg), int(not slot))
+            self.slots[not slot].send(*msg)
         elif msg[0] == "LEVELACC":  # propagate
-            self.send(' '.join(msg), int(not slot))
+            self.slots[not slot].send(*msg)
         elif msg[0] == "LEVELULD":
-            self.send(' '.join(msg), int(not slot))
-        elif msg[0] == "STARTGAME":
-            self.broadcast("STARTGAME " + msg[1])
+            self.slots[not slot].send(*msg)
+        elif msg[0] == "STARTGAME":  # time to start the game!!!
+            self.broadcast("STARTGAME", msg[1])
+            self.load_level(msg[1])
 
-    def send(self, msg, contact):
-        if isinstance(contact, int):
-            contact = self.slots[contact]
-        contact["conn"].send(msg+RS)
+    def load_level(self, name=None):
+        if name is None:
+            name = self.boardname
+        loc, self.board = LevelLoad.load_level(name)
+        self.boardname = name
+        for slot in self.slots:
+            slot.player.pos = loc
+            slot.player.board = self.board
 
-    def broadcast(self, msg):
+    def broadcast(self, *msg):
         for x in self.slots:
-            if "conn" in x:
-                self.send(msg, x)
+            if not x.is_open():
+                x.send(*msg)
 
     def process_received(self, msg):
         pass
@@ -118,14 +160,16 @@ class Server(threading.Thread):
 
     def get_sender(self, c):
         for i,x in enumerate(self.slots):
-            if x.has_key("conn"):
-                if x["conn"] == c:
-                    return i
+            if x.conn == c:
+                return i
+        print "Server.get_sender: I couldn't find the guy you're looking for, this is really bad."
 
     def get_next_slot(self):
         for i, x in enumerate(self.slots):
-            if x["type"] == Server.CLOSED:
+            if x.is_open():
                 return i
+        return None
+
 
 class Client(threading.Thread):
     def __init__(self, main, host=None):

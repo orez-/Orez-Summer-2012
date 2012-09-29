@@ -52,6 +52,12 @@ class Player(object):
         self.snorkel = False
         self.ice_dir = None
 
+    def _set_pos(self, (x, y)):
+        self.x = x
+        self.y = y
+
+    pos = property(lambda self: (self.x, self.y), _set_pos)
+
     def reblit(self, screen, center):
         if self.board.data[self.y][self.x] == Tile.ICE and self.ice_dir is not None:
             print "\nGonna slide from", self.x, self.y
@@ -90,6 +96,8 @@ class Player(object):
             if (newy, newx) in self.board.stuff:
                 stepped = self.board.stuff[(newy, newx)]
                 stepped.step(self)
+            return True
+        return False
 
 
 class TileFeature(object):
@@ -616,7 +624,7 @@ class Board:
         if tile_type == Tile.WALL:
             return False
         elif tile_type == Tile.WATER:
-            return who.snorkel  # TODO: What if water?
+            return who.snorkel
         elif tile_type in (Tile.OPEN, Tile.GRAVEL):
             return True
         elif tile_type == Tile.BLOCK:
