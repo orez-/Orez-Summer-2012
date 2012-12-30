@@ -35,11 +35,14 @@ class JoinUI(UI):
                 ("Back", lambda: self.go_back())
             ])
         self.base_buttons.bottom = SCREEN_SIZE[1]
-        self.hda = HostDataArea(self.type_buttons.bottom)
+        self.hda = HostDataArea(self, self.type_buttons.bottom)
         self.load_hosts()
 
         self.to_reblit = set([
             self.ip_box, self.type_buttons, self.base_buttons])
+        self.mouseable = [
+            self.ip_box, self.type_buttons, self.base_buttons,
+            self.hda.data]
         self._mode = JoinUI.STD_MODE
         self.redraw()
 
@@ -64,7 +67,7 @@ class JoinUI(UI):
     def load_hosts(self):
         try:
             with open(HOSTDATA_SAVE, "r") as f:
-                self.hda.data = []
+                self.hda.data[:] = []
                 for data in f:
                     addr, _, name = data.partition(chr(30))
                     name = name.rstrip("\n\r")
@@ -78,21 +81,27 @@ class JoinUI(UI):
                 f.write(''.join((data.address, chr(30), data.name, '\n')))
 
     def set_mode(self, value):
+        if self._mode == value:
+            return
         self._mode = value
         if self._mode == JoinUI.STD_MODE:
             self.ip_box.disabled = False
             self.to_reblit.discard(self.host_id_box)
             self.to_reblit.discard(self.save_buttons)
+            self.mouseable.remove(self.save_buttons)
             self.save_buttons.selected = None
             self.to_reblit.add(self.type_buttons)
-            self.hda.top = self.type_buttons.bottom
+            self.mouseable.append(self.type_buttons)
+            self.hda._top = self.type_buttons.bottom
         elif self._mode == JoinUI.SAVE_MODE:
             self.ip_box.disabled = True
             self.to_reblit.add(self.host_id_box)
             self.to_reblit.add(self.save_buttons)
+            self.mouseable.append(self.save_buttons)
             self.to_reblit.discard(self.type_buttons)
+            self.mouseable.remove(self.type_buttons)
             self.type_buttons.selected = None
-            self.hda.top = self.save_buttons.bottom
+            self.hda._top = self.save_buttons.bottom
         self.redraw()
 
     mode = property(lambda self: self._mode, set_mode)
@@ -139,9 +148,15 @@ class JoinUI(UI):
             if res == Textbox.TAB:
                 self.mode = JoinUI.STD_MODE
 
-    def handle_motion(self, event):
-        for elem in self.to_reblit:
+    def handle_motion(self, event, mouseable=None):
+        if mouseable is None:
+            mouseable = self.mouseable
+        for elem in mouseable:
             x, y = event.pos
+            try:
+                self.handle_motion(event, elem)
+            except TypeError:
+                pass
             try:
                 elem.top
             except:
@@ -152,20 +167,32 @@ class JoinUI(UI):
                 else:
                     elem.selected = None
 
-    def handle_click(self, event):
-        for elem in self.to_reblit:
-            if isinstance(elem, ButtonRow):
+    def handle_click(self, event, mouseable=None):
+        if mouseable is None:
+            mouseable = self.mouseable
+        for elem in mouseable:
+            try:
+                if self.handle_click(event, elem):
+                    return True
+            except TypeError:
+                pass
+            try:
+                elem.top
+            except:
+                pass
+            else:
                 if elem.handle_click(event):
-                    break
+                    return True
 
 
 class HostDataArea(object):
     SPACING = 5
-    def __init__(self, top):
+    def __init__(self, parent, top):
+        self.parent = parent
         self.surface = pygame.Surface((SCREEN_SIZE[0], 550))
         self.data = []
         self.dirty = set()
-        self.top = top
+        self._top = top
         self.redraw()
 
     def redraw(self):
@@ -176,35 +203,48 @@ class HostDataArea(object):
     def redraw_hd(self, i):
         elem = self.data[i]
         self.surface.blit(elem,
-            (HostDataArea.SPACING, HostDataArea.SPACING +
-                (HostDataArea.SPACING + HostData.HEIGHT) * i))
+            (HostDataArea.SPACING, elem.y))
 
     def reblit(self, surf):
         if self.dirty:
             for i in self.dirty:
                 self.redraw_hd(i)
-        surf.blit(self.surface, (0, self.top))
+        surf.blit(self.surface, (0, self._top))
 
     def add(self, address, name):
-        self.dirty.add(len(self.data))
-        self.data.append(HostData(self, address, name))
+        num = len(self.data)
+        self.dirty.add(num)
+        self.data.append(HostData(self, HostDataArea.SPACING +
+                (HostDataArea.SPACING + HostData.HEIGHT) * num, address, name))
 
 
 class HostData(pygame.Surface):
     HEIGHT = 80
-    def __init__(self, parent, address, name):
+    def __init__(self, parent, y, address, name):
         super(HostData, self).__init__((SCREEN_SIZE[0] - HostDataArea.SPACING * 2,
             HostData.HEIGHT))
         self.parent = parent
         self.address = str(address)
         self.name = str(name)
         self.font = pygame.font.Font(None, 24)
+        self._selected = None
 
+        self.y = y
         self.conn = TestConnection(self.address, self.handle_result)
 
         self.handle_result("POLLING")
         self.redraw()
         self.conn.start()
+
+    def set_selected(self, value):
+        self._selected = value
+        self.redraw()
+
+    top = property(lambda self: self.parent._top + self.y)
+    left = property(lambda self: HostDataArea.SPACING)
+    right = property(lambda self: SCREEN_SIZE[0] - HostDataArea.SPACING)
+    bottom = property(lambda self: self.top + HostData.HEIGHT)
+    selected = property(lambda self: self._selected, set_selected)
 
     def handle_result(self, result):
         if result == "BAD":
@@ -225,11 +265,21 @@ class HostData(pygame.Surface):
         if self in self.parent.data:
             self.parent.dirty.add(self.parent.data.index(self))
 
+    def handle_motion(self, event):
+        self.selected = True
+
     def redraw(self):
-        self.fill((0xEE, 0xDD, 0xFF))
+        self.fill((0xFF, 0xDD, 0xEE) if self.selected else (0xEE, 0xDD, 0xFF))
         self.blit(self.font.render(self.name, True, (0, ) * 3), (10, 10))
         self.blit(self.font.render(self.address, True, (0x99, ) * 3), (10, 30))
         self.blit(self.font.render(self.status, True, self.color), (10, 50))
+
+    def handle_click(self, event):
+        if self.selected:
+            ui = self.parent.parent
+            ui.set_mode(JoinUI.STD_MODE)
+            ui.ip_box.text = self.address
+            print self.address, self.name
 
 
 class ButtonRow(object):
