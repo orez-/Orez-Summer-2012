@@ -7,7 +7,7 @@ from board import Board, TileFeature, TileFeatureDict
 class LevelSave(object):
     @staticmethod
     def save(full_filename, board, start):
-        if os.path.isfile(full_filename) or len(full_filename) != 4:
+        if os.path.isfile(full_filename) or "/." in full_filename:
             return False
         with open(full_filename, "w") as f:
             stri = '\n'.join([''.join([hex(elem)[2:] for elem in row])
@@ -95,11 +95,11 @@ class LevelLoad(object):
 
     @staticmethod
     def full_path(*args):
-        return "maps/" + (''.join(map(str, args))) + ".skb"
+        return "data/maps/" + (''.join(map(str, args))) + ".skb"
 
     @staticmethod
     def full_path_draft(*args):
-        return "draft/" + (''.join(map(str, args))) + ".skb"
+        return "data/draft/" + (''.join(map(str, args))) + ".skb"
 
     @staticmethod
     def file_exists(filename):

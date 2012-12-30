@@ -69,6 +69,7 @@ class Main:
             self.ui_back()
             self.push_ui(WaitUI, True)
             self.join_server(ip)
+            self.client.send("JOIN")
         elif which == "editor load":
             self.push_ui(LoadEditorUI)
         elif which == "level select":  # before a game

@@ -21,11 +21,9 @@ class UserSlot(object):
         self.set_open()
 
     def parse_buffer(self):
-        toR = []
         while RS in self.buffer:
             term, _, self.buffer = self.buffer.partition(RS)
-            toR.append(term)
-        return toR
+            yield term
 
     def set_open(self):
         self._status = UserSlot.OPEN
@@ -60,7 +58,9 @@ class Server(threading.Thread):
         self.board = None
         self.boardname = None
         self.slots = [UserSlot() for _ in xrange(2)]
+        self.pending_connections = []
 
+        self.daemon = True
         self.polls = {}
         self.poll_commands = {"restart": self.cmd_restart}
 
@@ -71,32 +71,65 @@ class Server(threading.Thread):
     def run(self):
         self.sock.listen(2)
         while not self.done:
-            inputs = [x.conn for x in self.slots if not x.is_open()] + [self.sock]
+            inputs = [x.conn for x in self.slots if not x.is_open()] + [x.conn for x in self.pending_connections] + [self.sock]
             # blocks until someone connects or a client sends a message
             ready, _, _ = select.select(inputs, [], [], 0.5)
             for c in ready:
                 if c == self.sock:    # new player
                     self.player_join(c)
-                else:   # returning player's command
+                    continue
+                sender = None
+                for sender, x in enumerate(self.pending_connections):
+                    if x.conn == c:
+                        message = c.recv(MAX_PACKET_LENGTH)
+                        if not message:
+                            c.close()
+                            del self.pending_connections[sender]
+                        else:
+                            x.buffer += message
+                            for msg in x.parse_buffer():
+                                if msg == "SOKOPING":  # just checking
+                                    x.send("SOKOPONG")
+                                    c.close()
+                                    del self.pending_connections[sender]
+                                elif msg == "JOIN":  # can I play?
+                                    self.slots[1].new_player(c,
+                                        self.slots[0].player)
+                                    for j in self.pending_connections:
+                                        if j != x:  # the game is full to all
+                                            j.send("FULL")  # except x
+                                            j.conn.close()
+                                    self.pending_connections = []
+                                    self.broadcast("START")
+                                else:
+                                    print "Unexpected message for a pending connection:", msg
+                        break
+                    sender = None
+                if sender is None:
+                    # returning player's command
                     message = c.recv(MAX_PACKET_LENGTH)
+                    sender = self.get_sender(c)
                     if not message:  # close connection
                         c.close()  # TODO: probably want more in here
                         self.slots[sender].set_open()
                     else:   # a real command
-                        sender = self.get_sender(c)
                         self.slots[sender].buffer += message
-                        messages = self.slots[sender].parse_buffer()
-                        for msg in messages:
+                        for msg in self.slots[sender].parse_buffer():
                             self.handle_input(sender, msg)
 
     def player_join(self, c):
         conn, _ = c.accept()
         x = self.get_next_slot()
         if x:
-            self.slots[x].new_player(conn, self.slots[0].player)
-            self.broadcast("START")
-        else:
+            us = UserSlot()
+            us.set_connection(conn)
+            self.pending_connections.append(us)
+        elif x is not None:
             self.slots[x].new_player(conn)
+        else:  # out of space
+            conn.send("FULL" + RS)
+            print "out of space"  # i have a hunch that this line is crucial
+            conn.close()
 
     def handle_input(self, slot, message):
         msg = message.split(" ")
@@ -179,9 +212,11 @@ class Client(threading.Thread):
         self.ADDR = (host, PORT)
         threading.Thread.__init__(self)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        #self.msgs = Queue()
+        self.outmsgs = Queue()
         self.done = False
         self.recv_buf = ''
+        self.connected = False
+        self.daemon = True
 
     def run(self):
         try:
@@ -191,7 +226,12 @@ class Client(threading.Thread):
             self.main.change_screen("no connect")
             return
         self.sock.settimeout(0.5)
+        while not self.outmsgs.empty():
+            self.send(self.outmsgs.get(), True)
+        self.connected = True
         while not self.done:
+            while not self.outmsgs.empty():
+                self.send(self.outmsgs.get())
             while not self.done and self.recv_buf.find(RS) == -1:
                 try:
                     message = self.sock.recv(MAX_PACKET_LENGTH)
@@ -214,11 +254,14 @@ class Client(threading.Thread):
     def stop(self):
         self.done = True
 
-    def send(self, msg):
-        buf = msg + RS
-        while buf:
-            self.sock.send(buf[:MAX_PACKET_LENGTH])
-            buf = buf[MAX_PACKET_LENGTH:]
+    def send(self, msg, force=False):
+        if self.connected or force:
+            buf = msg + RS
+            while buf:
+                self.sock.send(buf[:MAX_PACKET_LENGTH])
+                buf = buf[MAX_PACKET_LENGTH:]
+        else:
+            self.outmsgs.put(msg)
 
     def process_received(self, message):
         msg = message.split(" ")
@@ -241,7 +284,7 @@ class Client(threading.Thread):
             send_map, filename, hashh = msg[1:]
             print msg[1:]
             if int(send_map):
-                with open("maps/" + filename + ".skb", "r") as f:
+                with open("data/maps/" + filename + ".skb", "r") as f:
                     self.main.send_msg("LEVELULD " + filename + " " + f.read())
                     print "Message sent????"
             else:
@@ -259,3 +302,50 @@ class Client(threading.Thread):
         elif msg[0] == "STARTGAME":  # everyone's ready!
             print msg
             self.main.change_screen("game", level=msg[1])
+        elif msg[0] == "FULL":  # couldn't join
+            pass
+        elif msg[0] == "SOKOPONG":
+            pass
+
+
+class TestConnection(threading.Thread):
+    def __init__(self, host, callback):
+        super(TestConnection, self).__init__()
+        self.ADDR = (host, PORT)
+        self.cb = callback
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.done = False
+        self.daemon = True
+
+    def stop(self):
+        self.done = True
+
+    def run(self):
+        self.cb("POLLING")
+        self.done = False
+        try:
+            self.sock.connect(self.ADDR)
+        except IOError:  # couldn't connect
+            self.cb("BAD")
+            return
+        self.sock.settimeout(0.5)
+        self.sock.send("SOKOPING" + chr(30))
+        while not self.done:
+            try:
+                message = self.sock.recv(MAX_PACKET_LENGTH)
+            except socket.timeout:
+                continue
+            except IOError:
+                self.cb("BAD")
+                return
+            if not message:  # done i guess.
+                self.cb(None)
+                return
+            else:
+                while message:
+                    msg, _, message = message.partition(chr(30))
+                    if msg in ("FULL", "SOKOPONG"):
+                        self.cb(msg)
+                        return
+                    else:
+                        print "Unrecognized message:", msg

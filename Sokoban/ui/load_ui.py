@@ -31,8 +31,8 @@ class LoadEditorUI(UI):
     def __init__(self, main, parent):
         super(LoadEditorUI, self).__init__(main, parent)
         self.load_box = LoadBox(
-            [["Maps", (0xD6, ) * 3, "maps"],
-             ["Drafts", (0xBB, ) * 3, "draft"]])
+            [["Maps", (0xD6, ) * 3, "data/maps"],
+             ["Drafts", (0xBB, ) * 3, "data/draft"]])
         self.surface = pygame.Surface(SCREEN_SIZE)
 
         self.redraw()
@@ -78,7 +78,7 @@ class LoadUI(UI):
     def __init__(self, main, parent):
         super(LoadUI, self).__init__(main, parent)
         self.load_box = LoadBox(
-            [["Maps", (0xD6, ) * 3, "maps"]])
+            [["Maps", (0xD6, ) * 3, "data/maps"]])
         self.surface = pygame.Surface(SCREEN_SIZE)
 
         self.suggest_text = ""
@@ -117,7 +117,7 @@ class LoadUI(UI):
         elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
             filename = self.load_box.load_results.files[
                 self.load_box.load_results.selection]
-            dec_filename = "maps/" + filename + ".skb"
+            dec_filename = "data/maps/" + filename + ".skb"
             self.main.send_msg("LEVELOFF " + filename + " " +
                 LevelLoad.check_hash(dec_filename))
         elif event.key == pygame.K_TAB:
@@ -126,7 +126,7 @@ class LoadUI(UI):
 
     def set_suggestion(self, filename, hashh):
         self.suggest_data = ("0", filename, hashh)
-        dec_filename = "maps/" + filename + ".skb"
+        dec_filename = "data/maps/" + filename + ".skb"
         _filename = filename.replace("_", " ")
         self.suggest_text = "How about '" + _filename + "'"
         if LevelLoad.file_exists(dec_filename):  # I have this file...
@@ -245,7 +245,7 @@ class LoadResults(object):
         self.hilite = pygame.Surface((R_WIDTH - SPACER + 1, SMALL_FONT.get_linesize() + SPACER - 2))
         self.hilite.fill(HILITE_COLOR)
         self.hilite.set_alpha(64)
-        self.get_files("maps")
+        self.get_files("data/maps")
 
     def set_prefix(self, value):
         self._prefix = value.lower()  #.replace(" ", "_")

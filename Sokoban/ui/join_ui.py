@@ -1,12 +1,15 @@
+import os
 import pygame
 
 from ui import UI
 from constants import SCREEN_SIZE
+from networking import TestConnection
 
 DESCFONT = pygame.font.Font(None, 30)
 PADDING = 8
 BG_COLOR = (200, 191, 231)
 BG_HILITE = (167, 152, 216)
+HOSTDATA_SAVE = "data/config/hostdata"
 
 
 class JoinUI(UI):
@@ -23,21 +26,56 @@ class JoinUI(UI):
                 ("Save Address", lambda: self.set_mode(JoinUI.SAVE_MODE))
             ], (0, 40))
         self.save_buttons = ButtonRow([
-                ("Save", lambda: None),
+                ("Save", lambda: self.create_hostdata()),
                 ("Cancel", lambda: self.set_mode(JoinUI.STD_MODE)),
             ], (0, 75))
         self.base_buttons = ButtonRow([
-                ("Connect", lambda: None),
                 ("Delete", lambda: None),
-                ("Refresh", lambda: None),
-                ("Back", lambda: self.main.ui_back())
+                ("Refresh", lambda: self.refresh()),
+                ("Back", lambda: self.go_back())
             ])
         self.base_buttons.bottom = SCREEN_SIZE[1]
+        self.hda = HostDataArea(self.type_buttons.bottom)
+        self.load_hosts()
 
         self.to_reblit = set([
             self.ip_box, self.type_buttons, self.base_buttons])
         self._mode = JoinUI.STD_MODE
         self.redraw()
+
+    def refresh(self):
+        for hd in self.hda.data:
+            hd.conn.stop()
+            hd.conn = TestConnection(hd.conn.ADDR[0], hd.conn.cb)
+            hd.conn.start()
+
+    def go_back(self):
+        for hd in self.hda.data:
+            hd.conn.stop()
+        self.main.ui_back()
+
+    def create_hostdata(self):
+        self.hda.add(self.ip_box.text, self.host_id_box.text)
+        self.set_mode(JoinUI.STD_MODE)
+        self.ip_box.text = ""
+        self.host_id_box.text = ""
+        self.save_hosts()
+
+    def load_hosts(self):
+        try:
+            with open(HOSTDATA_SAVE, "r") as f:
+                self.hda.data = []
+                for data in f:
+                    addr, _, name = data.partition(chr(30))
+                    name = name.rstrip("\n\r")
+                    self.hda.add(addr, name)
+        except IOError:
+            print "Host file not found"
+
+    def save_hosts(self):
+        with open(HOSTDATA_SAVE, "w") as f:
+            for data in self.hda.data:
+                f.write(''.join((data.address, chr(30), data.name, '\n')))
 
     def set_mode(self, value):
         self._mode = value
@@ -47,18 +85,21 @@ class JoinUI(UI):
             self.to_reblit.discard(self.save_buttons)
             self.save_buttons.selected = None
             self.to_reblit.add(self.type_buttons)
+            self.hda.top = self.type_buttons.bottom
         elif self._mode == JoinUI.SAVE_MODE:
             self.ip_box.disabled = True
             self.to_reblit.add(self.host_id_box)
             self.to_reblit.add(self.save_buttons)
             self.to_reblit.discard(self.type_buttons)
             self.type_buttons.selected = None
+            self.hda.top = self.save_buttons.bottom
         self.redraw()
 
     mode = property(lambda self: self._mode, set_mode)
 
     def reblit(self, surf):
         surf.blit(self.surface, (0, 0))
+        self.hda.reblit(surf)
         for x in self.to_reblit:
             x.reblit(surf)
         #self.ip_box.reblit(surf)
@@ -68,7 +109,7 @@ class JoinUI(UI):
 
     def redraw(self):
         self.surface.fill((0xFF, ) * 3)
-        self.surface.fill((200, 191, 231), ((0, 0), (550, 80)))
+        self.surface.fill((200, 191, 231), ((0, 0), (SCREEN_SIZE[0], 80)))
         self.surface.blit(DESCFONT.render("Host Address", True, (0, ) * 3),
             (PADDING, PADDING))
 
@@ -116,6 +157,79 @@ class JoinUI(UI):
             if isinstance(elem, ButtonRow):
                 if elem.handle_click(event):
                     break
+
+
+class HostDataArea(object):
+    SPACING = 5
+    def __init__(self, top):
+        self.surface = pygame.Surface((SCREEN_SIZE[0], 550))
+        self.data = []
+        self.dirty = set()
+        self.top = top
+        self.redraw()
+
+    def redraw(self):
+        self.surface.fill((0xFF, ) * 3)
+        for i, _ in enumerate(self.data):
+            self.redraw_hd(i)
+
+    def redraw_hd(self, i):
+        elem = self.data[i]
+        self.surface.blit(elem,
+            (HostDataArea.SPACING, HostDataArea.SPACING +
+                (HostDataArea.SPACING + HostData.HEIGHT) * i))
+
+    def reblit(self, surf):
+        if self.dirty:
+            for i in self.dirty:
+                self.redraw_hd(i)
+        surf.blit(self.surface, (0, self.top))
+
+    def add(self, address, name):
+        self.dirty.add(len(self.data))
+        self.data.append(HostData(self, address, name))
+
+
+class HostData(pygame.Surface):
+    HEIGHT = 80
+    def __init__(self, parent, address, name):
+        super(HostData, self).__init__((SCREEN_SIZE[0] - HostDataArea.SPACING * 2,
+            HostData.HEIGHT))
+        self.parent = parent
+        self.address = str(address)
+        self.name = str(name)
+        self.font = pygame.font.Font(None, 24)
+
+        self.conn = TestConnection(self.address, self.handle_result)
+
+        self.handle_result("POLLING")
+        self.redraw()
+        self.conn.start()
+
+    def handle_result(self, result):
+        if result == "BAD":
+            self.status = "Server unavailable"
+            self.color = (0xCC, 0, 0)
+        elif result == "SOKOPONG":  # This is the guy we like
+            self.status = "Available!"
+            self.color = (0, 0x99, 0)
+        elif result == "FULL":
+            self.status = "Game in progress"
+            self.color = (0x66, 0, 0)
+        elif result == "POLLING":
+            self.color = (0x66, ) * 3
+            self.status = "Polling"
+        else:
+            print "wat"
+        self.redraw()
+        if self in self.parent.data:
+            self.parent.dirty.add(self.parent.data.index(self))
+
+    def redraw(self):
+        self.fill((0xEE, 0xDD, 0xFF))
+        self.blit(self.font.render(self.name, True, (0, ) * 3), (10, 10))
+        self.blit(self.font.render(self.address, True, (0x99, ) * 3), (10, 30))
+        self.blit(self.font.render(self.status, True, self.color), (10, 50))
 
 
 class ButtonRow(object):
@@ -193,7 +307,7 @@ class Textbox(object):
 
     def __init__(self, (x, y), width, fontheight=30):
         self.padding = 3
-        self.text = ""
+        self._text = ""
         self.font = pygame.font.Font(None, fontheight)
         self.surface = pygame.Surface((width,
             self.padding * 2 + self.font.get_linesize()))
@@ -203,11 +317,19 @@ class Textbox(object):
         self.redraw_text()
         self.redraw_border()
 
+    def set_text(self, value):
+        if self._disabled:
+            return False
+        self._text = str(value)
+        self.redraw_text()
+        return True
+
     def set_disabled(self, value):
         self._disabled = value
         self.redraw_border()
 
     disabled = property(lambda self: self._disabled, set_disabled)
+    text = property(lambda self: self._text, set_text)
 
     def redraw_text(self):
         self.surface.fill((0xFF, ) * 3)
@@ -237,4 +359,3 @@ class Textbox(object):
             self.text += event.unicode
         else:
             return None
-        self.redraw_text()
