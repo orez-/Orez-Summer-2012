@@ -1,5 +1,6 @@
 import os
 import pygame
+import time
 
 from ui import UI
 from constants import SCREEN_SIZE
@@ -19,6 +20,8 @@ class JoinUI(UI):
     def __init__(self, main, parent):
         super(JoinUI, self).__init__(main, parent)
         self.surface = pygame.Surface((SCREEN_SIZE))
+        self.selected = None
+        self.last_click = 0
         self.ip_box = Textbox((155, 5), 500)
         self.host_id_box = Textbox((155, 40), 500)
         self.type_buttons = ButtonRow([
@@ -167,12 +170,15 @@ class JoinUI(UI):
                 else:
                     elem.selected = None
 
-    def handle_click(self, event, mouseable=None):
+    def handle_click(self, event, mouseable=None, elapsed=None):
         if mouseable is None:
             mouseable = self.mouseable
+            t = time.time()
+            elapsed = t - self.last_click
+            self.last_click = t
         for elem in mouseable:
             try:
-                if self.handle_click(event, elem):
+                if self.handle_click(event, elem, elapsed):
                     return True
             except TypeError:
                 pass
@@ -181,7 +187,7 @@ class JoinUI(UI):
             except:
                 pass
             else:
-                if elem.handle_click(event):
+                if elem.handle_click(event, elapsed):
                     return True
 
 
@@ -269,17 +275,30 @@ class HostData(pygame.Surface):
         self.selected = True
 
     def redraw(self):
-        self.fill((0xFF, 0xDD, 0xEE) if self.selected else (0xEE, 0xDD, 0xFF))
+        color = ((0xEE, 0xDD, 0xFF), (0xFF, 0xDD, 0xEE),
+                 (0xEE, 0xBB, 0xFF), (0xFF, 0xBB, 0xFF)
+            )[bool(self.selected) + (self.parent.parent.selected is self) * 2]
+        self.fill(color)
         self.blit(self.font.render(self.name, True, (0, ) * 3), (10, 10))
         self.blit(self.font.render(self.address, True, (0x99, ) * 3), (10, 30))
         self.blit(self.font.render(self.status, True, self.color), (10, 50))
 
-    def handle_click(self, event):
+    def handle_click(self, event, elapsed):
         if self.selected:
             ui = self.parent.parent
+            if ui.selected is self and elapsed < .350:  # doubleclick
+                ui.ip_box.text = self.address
+                ui.main.change_screen("join ip")
+                return True
+            if ui.selected:
+                temp = ui.selected
+                ui.selected = None
+                temp.redraw()
             ui.set_mode(JoinUI.STD_MODE)
             ui.ip_box.text = self.address
-            print self.address, self.name
+            ui.selected = self
+            self.redraw()
+            return True
 
 
 class ButtonRow(object):
@@ -344,7 +363,7 @@ class ButtonRow(object):
     def handle_motion(self, event):
         self.selected = event.pos[0] // self.step
 
-    def handle_click(self, event):
+    def handle_click(self, event, elapsed):
         if self.selected is not None:
             self.name_actions[self.selected][1]()
             return True
